@@ -1,0 +1,13 @@
+a_*
+dataset_*
+.vscode/
+*.pyc
+*.swp
+*.vim
+cscope*
+build/
+output/
+eva_output/
+*.tgz
+BM_*
+temp/
