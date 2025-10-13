@@ -42,9 +42,16 @@ vn=`expr $n / 1000000`
 index_path=BM_${vn}M_${c}
 if echo $e | grep -q "RE"; then
 	index_path=${index_path}_RE
-else
+elif echo $e | grep -q "EE"; then
 	index_path=${index_path}_EE
+else
+	index_path=${index_path}_AE_${g_len}
 fi
+
+# if echo $e | grep -q "AE"; then
+# 	index_path=${index_path}_AE
+# fi
+
 index_path=${index_path}_32
 group_path=BM_${vn}M_${c}_GE_${g_len}_32
 

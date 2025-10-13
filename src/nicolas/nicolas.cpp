@@ -93,10 +93,10 @@ void build_index(Table_config *config)
         }
     }
     else if(config->encoding == AE) {
-        genAE(config->DATA_PATH, config->GROUP_PATH,config->GE_group_len, config->g_cardinality, config->n_rows);
+        genAE(config->DATA_PATH, config->INDEX_PATH, config->GE_group_len, config->g_cardinality, config->n_rows);
     }
     else {
-        cerr << "ERROR: Invalid encoding scheme. Supported schemes are EE, RE, and GE." << endl;
+        cerr << "ERROR: Invalid encoding scheme. Supported schemes are EE, RE, GE and AE." << endl;
         exit(-1);
     }
 
@@ -383,7 +383,8 @@ std::map<std::string, Index_encoding> encodingMap = {
     {"EE", EE},
     {"RE", RE},
     {"IE", IE},
-    {"GE", GE}
+    {"GE", GE},
+    {"AE", AE}
 };
 
 int main(const int argc, const char *argv[]) 
