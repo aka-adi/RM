@@ -154,6 +154,37 @@ void genGE( std::string data_path, std::string write_dir, int group_length, int 
 
 }
 
+void genAE( std::string data_path, std::string write_dir, int group_length, int cardinality, uint64_t rows) {
+
+	char name[] = "/tmp/tmpbitmapXXXXXX";
+	auto tmp_path = mkdtemp(name);
+	string ee_path(tmp_path, tmp_path + strlen(tmp_path));
+	ee_path = CheckDir(ee_path);
+	genEE(data_path, ee_path, rows);
+
+	write_dir = CheckDir(write_dir);
+
+	for(int i = 0; i < cardinality; i += group_length) {
+
+		ibis::bitvector curr_btv;
+
+		for(int j = 0; j + i < cardinality && j < group_length; j++) {
+			stringstream ss;
+			ss << ee_path << j + i << ".bm";
+			ibis::bitvector btv(ss.str().c_str());
+			curr_btv |= btv;
+
+			stringstream w;
+			w << write_dir << j + i << ".bm";
+			curr_btv.compress();
+			curr_btv.write(w.str().c_str());
+		}
+
+	}
+	unlink(tmp_path);
+
+}
+
 void genGEbyEE( std::string ee_path, std::string write_dir, int group_length, int cardinality, uint64_t rows) {
 
 	write_dir = CheckDir(write_dir);

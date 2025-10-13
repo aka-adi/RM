@@ -75,7 +75,7 @@ long rdtsc_diff(long before, long after);
 #define TYPE_DELETE (3)
 #define TYPE_MERGE (4)
 
-enum Index_encoding {EE, RE, IE, GE};
+enum Index_encoding {EE, RE, IE, GE, AE};
 
 class Table_config {
     public:

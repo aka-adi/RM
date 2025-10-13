@@ -92,6 +92,9 @@ void build_index(Table_config *config)
             genGE(config->DATA_PATH, config->GROUP_PATH,config->GE_group_len, config->g_cardinality, config->n_rows);
         }
     }
+    else if(config->encoding == AE) {
+        genAE(config->DATA_PATH, config->GROUP_PATH,config->GE_group_len, config->g_cardinality, config->n_rows);
+    }
     else {
         cerr << "ERROR: Invalid encoding scheme. Supported schemes are EE, RE, and GE." << endl;
         exit(-1);
