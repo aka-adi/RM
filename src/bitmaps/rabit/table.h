@@ -116,6 +116,8 @@ protected:
 
     int pos2GE(int start, int end, Btv_set &pos_set);
 
+    int pos2AE(int start, int end, Btv_set &pos_set);
+
     inline int get_group_id(uint32_t idx) {
         assert(idx < GE_IDX_BEGIN);
         return GE_IDX_BEGIN + (idx / config->GE_group_len);

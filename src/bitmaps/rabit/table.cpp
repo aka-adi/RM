@@ -524,6 +524,45 @@ int Rabit::pos2GE(int from, int to, Btv_set &pos_ge)
     return 0;
 }
 
+void AeToSet(int val, int g_len, Btv_set &pos_ae) {
+    uint32_t group = (uint32_t)val / g_len;
+    uint32_t right = (group + 1) * g_len;
+    for(uint32_t i = val; i < right; i++) {
+        pos_ae.insert(i);
+    }
+}
+
+int Rabit::pos2AE(int from, int to, Btv_set &pos_ae)
+{
+    if(from == FROM_INV) {
+        AeToSet(to, config->GE_group_len, pos_ae);
+    }
+    else {
+        uint32_t groupTo = (uint32_t)to / config->GE_group_len;
+        uint32_t groupFrom = (uint32_t)from / config->GE_group_len;
+
+        // 同一组
+        if(groupTo == groupFrom) {
+            uint32_t gL = from;
+            uint32_t gR = to;
+            if(from > to) {
+                gL = to;
+                gR = from;
+            }
+            for(uint32_t i = gL; i < gR; i++) {
+                pos_ae.insert(i);
+            }
+            return 0;
+        }
+
+        // 不同组
+        AeToSet(from, config->GE_group_len, pos_ae);
+        AeToSet(to, config->GE_group_len, pos_ae);
+
+    }
+    return 0;
+}
+
 int Rabit::append(int tid, int val)
 {
     return append(tid, val, UINT64_MAX);
@@ -548,6 +587,8 @@ int Rabit::append(int tid, int val, uint64_t row_id)
     }
     else if (config->encoding == GE) {
         pos2GE(FROM_INV, val, pos_set);
+    } else if (config->encoding == AE) {
+        pos2AE(FROM_INV, val, pos_set);
     }
 
     // We temporarily set row_id values to prevent 
@@ -627,6 +668,8 @@ int Rabit::update(int tid, uint64_t row_id, int to_val)
     }
     else if (config->encoding == GE) {
         pos2GE(from_val, to_val, pos_set);
+    } else if(config->encoding == AE) {
+        pos2AE(from_val, to_val, pos_set);
     }
 
     trans->rubs[row_id] = RUB{row_id, TYPE_UPDATE, pos_set};
@@ -675,6 +718,8 @@ int Rabit::remove(int tid, uint64_t row_id)
     }
     else if (config->encoding == GE) {
         pos2GE(FROM_INV, val, pos_set);
+    } else if (config->encoding == AE) {
+        pos2AE(FROM_INV, val, pos_set);
     }
 
     trans->rubs[row_id] = RUB{row_id, TYPE_DELETE, pos_set};
@@ -853,7 +898,7 @@ void Rabit::_get_value(uint64_t row_id, int begin, int range, uint64_t l_timesta
                 __atomic_store_n(flag, true, MM_CST);
                 break;
             }
-            else if (config->encoding == RE) {
+            else if (config->encoding == RE || config->encoding == AE) {
                 if (ret == -1) {
                     ret = curVal;
                 } else {
@@ -911,7 +956,7 @@ int Rabit::get_value_rcu(uint64_t row_id, uint64_t l_timestamp, RUB &last_rub)
                 }
                 ret = tmp;
             }
-            else if (config->encoding == RE) {
+            else if (config->encoding == RE || config->encoding == AE) {
                 if (ret == -1) {
                     ret = tmp;
                 } else {
