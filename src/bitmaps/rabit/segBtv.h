@@ -86,6 +86,7 @@ struct btv_seg {
 
     btv_buffer * buffer;
     btv_seg *next;
+    struct rcu_head head;
     
     btv_seg() : id(-1), start_row(0), end_row(0) 
                 {btv = new ibis::bitvector(); buffer = new btv_buffer(); next = nullptr;};
@@ -95,6 +96,13 @@ struct btv_seg {
     void setbit(uint64_t row_id,int val, Table_config *config) 
                 {assert(row_id <= end_row); assert(row_id >= start_row); btv->setBit(row_id - start_row, val, config);};
 };
+
+static inline
+void free_btv_seg_cb(struct rcu_head *head)
+{
+    struct btv_seg *btv = caa_container_of(head, struct Bitvector, head);
+    delete btv;
+}
 
 class SegBtv {
 private:

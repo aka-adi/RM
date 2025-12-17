@@ -4,6 +4,7 @@
 #include <cstdlib>
 #include <iostream>
 #include <thread>
+#include <urcu.h>
 
 #include "fastbit/bitvector.h"
 #include "bitmaps/rabit/segBtv.h"
@@ -543,4 +544,7 @@ void SegBtv::Replacesegbtv(uint32_t seg_id, uint64_t l_timestamp, Table_config *
     *seg_new->btv ^= *this->seg_table[seg_id]->btv;
 
     __atomic_store_n(&this->seg_table[seg_id], seg_new, MM_RELEASE);
+    if (seg_new->next) {
+        call_rcu(&seg_new->next->head, free_btv_seg_cb);
+    }
 }
