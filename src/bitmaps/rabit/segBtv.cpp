@@ -471,6 +471,49 @@ SegBtv * SegBtv::operator^(SegBtv &rhs)
     return segbtv_new;
 }
 
+void SegBtv::_xor_in_thread_with_timestamp(SegBtv &rhs, uint32_t begin, uint32_t end, uint64_t l_timestamp,
+                                         const std::map<uint32_t, std::set<uint64_t>>& seg_rids, 
+                                         Table_config *config) 
+{
+    for(uint32_t i = begin; i < end; i++) {
+        btv_seg *curr_seg = __atomic_load_n(&seg_table[i], MM_ACQUIRE);
+        btv_seg *rhs_seg = __atomic_load_n(&rhs.seg_table[i], MM_ACQUIRE);
+        assert(curr_seg->buffer->buffer_pos_ == 0);
+        ibis::bitvector *btv_1 = curr_seg->btv;
+        ibis::bitvector *btv_2 = rhs_seg->btv;
+
+        // read rids
+        std::set<uint64_t> rids{};
+        rhs_seg->buffer->get_rids_from_buffer(l_timestamp, rids);
+
+        auto it = seg_rids.find(i);
+        if(it != seg_rids.end()) {
+            for (auto row_id_t : it->second) {
+                if(rids.count(row_id_t))
+                    rids.erase(row_id_t);
+                else rids.insert(row_id_t);
+            }
+        }
+
+        // btv_2 is a shared resource, so we need COW.
+        // b1 XOR (b2 XOR rids) => b1 XOR b2 XOR rids
+        if(btv_1->size() > btv_2->size()) {
+            ibis::bitvector btv_copy;
+            btv_copy.copy(*btv_2);
+            (*btv_1).operator^= (btv_copy);
+        }
+        else {
+            (*btv_1).operator^= (*btv_2);
+        }
+
+        for (auto row_id_t : rids) {
+            btv_1->setBit(row_id_t - curr_seg->start_row, !btv_1->getBit(row_id_t - curr_seg->start_row, config), config);
+        }
+        
+        btv_1->decompress();
+    }
+}
+
 void SegBtv::_or_in_thread_with_timestamp(SegBtv &rhs, uint32_t begin, uint32_t end, uint64_t l_timestamp,
                                          const std::map<uint32_t, std::set<uint64_t>>& seg_rids, 
                                          Table_config *config) 

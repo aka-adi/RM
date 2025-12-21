@@ -154,6 +154,8 @@ public:
     ///Perform bitwise exclusive or (XOR).
     void operator^=(SegBtv &rhs);
 
+    void _xor_in_thread_with_timestamp(SegBtv &rhs, uint32_t begin, uint32_t end, uint64_t l_timestamp, const std::map<uint32_t, std::set<uint64_t>>& seg_rids, Table_config *config);
+
     void _or_in_thread_with_timestamp(SegBtv &rhs, uint32_t begin, uint32_t end, uint64_t l_timestamp, const std::map<uint32_t, std::set<uint64_t>>& seg_rids, Table_config *config);
 
     ///Perform bitwise XOR and return the result as a new bitvector.
