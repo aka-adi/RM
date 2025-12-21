@@ -150,6 +150,7 @@ public:
     void _load_btv(int, int, TransDesc*, Table_config*);
     void _load_btv_GE(int, int, TransDesc*, Table_config*);
     void _or_btv(SegBtv &res, uint32_t idx, TransDesc *trans);
+    void _xor_btv(SegBtv &res, uint32_t idx, TransDesc *trans);
 
     TransDesc * trans_begin(int, uint64_t db_timestamp_t = UINT64_MAX);
     int trans_commit(int tid, uint64_t db_timestamp_t = UINT64_MAX, uint64_t db_row_nums = UINT64_MAX);

@@ -1060,52 +1060,65 @@ SegBtv *Rabit::range_res(int tid, uint32_t start, uint32_t range)
 
     if(config->encoding == EE) {
         range_vec.emplace_back(std::pair(start, start + range - 1));
-    }
-    else if(config->encoding == GE) 
-    {
-        uint32_t end = start + range - 1;
-        auto group_start = get_group_id(start);
-        auto group_end = get_group_id(end);
-
-        if ((start % config->GE_group_len == 0) && 
-            (end % config->GE_group_len == config->GE_group_len - 1)) {
-            range_vec.emplace_back(std::pair(group_start, group_end));
+        for(auto &p : range_vec) {
+            for(auto i = p.first; i <= p.second; i++) {
+                _or_btv(*res, i, trans);
+            }
         }
-        else if (group_start == group_end) {
-            range_vec.emplace_back(std::pair(start, end));
-        } else {
-            auto group_len = config->GE_group_len;
+    }
+    else if(config->encoding == AE) {
+        uint32_t l = start;
+        uint32_t r = start + range - 1;
+        
+        // 获取l和r所在的区间信息，复用GE_group_len
+        uint32_t group_len = config->GE_group_len;
 
-            auto last_EE_in_first_group = (start/group_len*group_len) + group_len - 1;
-            auto first_EE_in_first_group = start/group_len*group_len;
-            if(first_EE_in_first_group == start) {
-                range_vec.emplace_back(std::pair(group_start, group_start));
+        // 计算区间组ID（从0开始计数）
+        uint32_t group_s = l / group_len;          // l所在的组ID
+        uint32_t group_t = r / group_len;          // r所在的组ID
+        
+        // 计算l所在区间的左端点和右端点
+        uint32_t L_s = group_s * group_len;  // 区间I_s的左端点
+        uint32_t U_s = L_s + group_len - 1;          // 区间I_s的右端点
+        
+        // 计算r所在区间的左端点和右端点
+        uint32_t L_t = group_t * group_len;  // 区间I_t的左端点
+        uint32_t U_t = L_t + group_len - 1;          // 区间I_t的右端点
+        
+        
+        // 根据双边查询公式处理不同情况
+        if (group_s == group_t) {  // l和r在同一个区间I_k内
+            if (l != L_s) {  // l不是区间的左端点L_k
+                // 范围为IR_r ⊕ IR_{l-1}
+                _xor_btv(*res, l - 1, trans);
+                _xor_btv(*res, r, trans);
+            } else {  // l是区间的左端点L_k
+                // 范围为IR_r
+                _xor_btv(*res, r, trans);
             }
-            else {
-                range_vec.emplace_back(std::pair(start, last_EE_in_first_group));
-            }
-
-            range_vec.emplace_back(std::pair(group_start+1, group_end-1));
-
-            auto last_EE_in_last_group = (end/group_len*group_len) + group_len - 1;
-            auto first_EE_in_last_group = end/group_len*group_len;
-            if(last_EE_in_last_group == end) {
-                range_vec.emplace_back(std::pair(group_end, group_end));
-            }
-            else {
-                range_vec.emplace_back(std::pair(first_EE_in_last_group, end));
+        } else {  // l和r在不同的区间I_s和I_t内（s < t）
+            if (l != L_s) {  // l不是区间I_s的左端点L_s
+                // 范围为(IR_{U_s} ⊕ IR_{l-1}) ∨ (∨_{j=s+1}^{t-1} IR_{U_j}) ∨ IR_r
+                _xor_btv(*res, l - 1, trans);
+                _xor_btv(*res, U_s, trans);
+                for(uint32_t i = group_s + 1; i <= group_t - 1; i++) {
+                    uint32_t U_j = i * group_len;
+                    _or_btv(*res, U_j, trans);
+                }
+                _or_btv(*res, r, trans);
+            } else {  // l是区间I_s的左端点L_s
+                // 范围为IR_{U_s} ∨ (∨_{j=s+1}^{t-1} IR_{U_j}) ∨ IR_r
+                for(uint32_t i = group_s; i <= group_t - 1; i++) {
+                    uint32_t U_j = i * group_len;
+                    _or_btv(*res, U_j, trans);
+                }
+                _or_btv(*res, r, trans);
             }
         }
     }
     else {
         std::cout << "not implemented" << std::endl;
         exit(-1);
-    }
-
-    for(auto &p : range_vec) {
-        for(auto i = p.first; i <= p.second; i++) {
-            _or_btv(*res, i, trans);
-        }
     }
 
     rcu_read_unlock();
@@ -1133,6 +1146,24 @@ void Rabit::_or_btv(SegBtv &res, uint32_t idx, TransDesc *trans)
         seg_rids[idx].insert(row_id_t);
     }
     res._or_in_thread_with_timestamp(*Btv->seg_btv, 0, res.seg_table.size(), start_trans->l_commit_ts, seg_rids, config);
+}
+
+void Rabit::_xor_btv(SegBtv &res, uint32_t idx, TransDesc *trans) 
+{
+    auto tsp_end = READ_ONCE(trans->l_start_ts);
+    Bitvector *Btv = get_btv(idx);
+    auto start_trans = Btv->log_shortcut;
+    map<uint64_t, RUB> rubs{};
+    std::map<uint32_t, std::set<uint64_t>> seg_rids;
+    
+    get_rubs_on_btv(start_trans->l_commit_ts, tsp_end, start_trans, idx, rubs);
+    
+    for (const auto &[row_id_t, rub_t] : rubs) {
+        assert(rub_t.pos.count(idx));
+        uint32_t idx = res.getSegId(row_id_t);
+        seg_rids[idx].insert(row_id_t);
+    }
+    res._xor_in_thread_with_timestamp(*Btv->seg_btv, 0, res.seg_table.size(), start_trans->l_commit_ts, seg_rids, config);
 }
 
 // This is a helper function
