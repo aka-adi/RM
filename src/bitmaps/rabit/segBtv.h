@@ -2,6 +2,7 @@
 #define SEG_BTV_H_
 
 #include <map>
+#include <urcu.h>
 
 #include "fastbit/bitvector.h"
 
@@ -100,7 +101,7 @@ struct btv_seg {
 static inline
 void free_btv_seg_cb(struct rcu_head *head)
 {
-    struct btv_seg *btv = caa_container_of(head, struct Bitvector, head);
+    struct btv_seg *btv = caa_container_of(head, struct btv_seg, head);
     delete btv;
 }
 
