@@ -9,7 +9,7 @@ if len(sys.argv) != 3:
     exit()
 
 N, C = int(sys.argv[1]), int(sys.argv[2])
-filename = 'dataset_' + str(N) + '_' + str(C)
+filename = 'uniform_dataset_' + str(N) + '_' + str(C)
 
 if (os.path.isfile(filename + "_done")):
     print("Data file " + filename + " already exists. Skip creating.")

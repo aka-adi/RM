@@ -47,11 +47,8 @@ vn=`expr $n / 1000000`
 index_path=BM_
 data_path=dataset_${n}_${c}
 
-# 不使用均匀分布
-if ! echo $dataset_name | grep -q "uniform"; then
-	index_path=${index_path}${dataset_name}_
-	data_path=${dataset_name}_${data_path}
-fi
+index_path=${index_path}${dataset_name}_
+data_path=${dataset_name}_${data_path}
 index_path=${index_path}${vn}M_${c}
 
 if echo $e | grep -q "RE"; then
