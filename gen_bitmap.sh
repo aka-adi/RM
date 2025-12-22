@@ -16,8 +16,9 @@ n=100000000
 c=100
 g_len=10
 e=EE
+dataset_name=uniform
 
-while getopts "n:c:l:e:" opt; do
+while getopts "n:c:l:e:d:" opt; do
 	case $opt in
 		n)
 			n=$OPTARG
@@ -31,6 +32,10 @@ while getopts "n:c:l:e:" opt; do
 		e)
 			e="$OPTARG"
 			;;
+		d)
+			dataset_name="$OPTARG"
+			echo "dataset_name: $dataset_name"
+			;;
 		\?)
 			echo "error input"
 			exit 1
@@ -39,7 +44,16 @@ while getopts "n:c:l:e:" opt; do
 done
 
 vn=`expr $n / 1000000`
-index_path=BM_${vn}M_${c}
+index_path=BM_
+data_path=dataset_${n}_${c}
+
+# 不使用均匀分布
+if ! echo $dataset_name | grep -q "uniform"; then
+	index_path=${index_path}${dataset_name}_
+	data_path=${dataset_name}_${data_path}
+fi
+index_path=${index_path}${vn}M_${c}
+
 if echo $e | grep -q "RE"; then
 	index_path=${index_path}_RE
 elif echo $e | grep -q "EE"; then
@@ -55,7 +69,7 @@ fi
 index_path=${index_path}_32
 group_path=BM_${vn}M_${c}_GE_${g_len}_32
 
-cmd="./build/nicolas --cardinality ${c} --index-path ${index_path} --group-path ${group_path} --number-of-rows $n --data-path dataset_${n}_${c} --mode build --encoding-scheme ${e} --GE-group-len ${g_len}"
+cmd="./build/nicolas --cardinality ${c} --index-path ${index_path} --group-path ${group_path} --number-of-rows $n --data-path ${data_path} --mode build --encoding-scheme ${e} --GE-group-len ${g_len}"
 
 echo $cmd
 $cmd
