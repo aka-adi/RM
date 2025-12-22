@@ -128,7 +128,7 @@ void worker_func(int tid, const string& mode, Table_config *config)
     default_random_engine generator(seed);
     
     int btv_range;
-    if (config->encoding == EE || config->encoding == GE) {
+    if (config->encoding == EE || config->encoding == AE) {
         btv_range = config->g_cardinality - 1;
     }
     else if (config->encoding == RE) {

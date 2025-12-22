@@ -17,18 +17,12 @@ Rabit::Rabit(Table_config *config) : BaseTable(config),
     merge_threshold = config->n_merge_threshold;
     db_control = config->db_control;
 
-    if (config->encoding == EE || config->encoding == GE)
+    if (config->encoding == EE || config->encoding == AE)
         num_btvs = config->g_cardinality;
     else if (config->encoding == RE) 
         num_btvs = config->g_cardinality - 1;
     else 
         assert(0);
-
-    if (config->encoding == GE) {
-        num_btvs_GE = (config->g_cardinality + config->GE_group_len - 1) / config->GE_group_len;
-    } else {
-        num_btvs_GE = 0;
-    }
 
     TransDesc *trans_dummy = new TransDesc();
 
@@ -77,31 +71,6 @@ Rabit::Rabit(Table_config *config) : BaseTable(config),
 
     delete[] threads;
 
-    //Load GE bitvectors
-    if(config->encoding == GE) {
-        n_threads = (config->nThreads_for_getval > num_btvs_GE) ?
-                        num_btvs_GE : config->nThreads_for_getval;
-        n_btv_per_thread = num_btvs_GE / n_threads;
-        reminder = num_btvs_GE % n_threads;
-        assert(n_btv_per_thread >= 1);
-
-        vector<int>begin (n_threads + 1, 0);
-        for(int i = 1; i <= reminder; i++)
-            begin[i] = begin[i - 1] + n_btv_per_thread + 1;
-        for(int i = reminder + 1; i <= n_threads; i++)
-            begin[i] = begin[i - 1] + n_btv_per_thread;
-
-        threads = new thread[n_threads];
-        for (int i = 0; i < n_threads; i++) {
-            threads[i] = thread(&Rabit::_load_btv_GE, this, begin[i], begin[i + 1], trans_dummy, config);
-        }
-
-        for (int t = 0; t < n_threads; t++) {
-            threads[t].join();
-        }
-        delete[] threads;
-    }
-
     n_trans_pool = config->n_workers*(config->n_udis+config->n_queries)*2;
     trans_pool = new TransDesc[n_trans_pool] {};
     assert(trans_pool);
@@ -112,14 +81,6 @@ Rabit::Rabit(Table_config *config) : BaseTable(config),
         for (int i = 0; i < num_btvs; i++) {
             for (const auto &[id_t, seg_t] : Btvs[i]->seg_btv->seg_table) {
                 btv_size_t += seg_t->btv->getSerialSize();
-            }
-        }
-
-        if (config->encoding == GE) {
-            for (int i = 0; i < num_btvs_GE; i++) {
-                for (const auto &[id_t, seg_t] : Btvs_GE[i]->seg_btv->seg_table) {
-                    btv_size_t += seg_t->btv->getSerialSize();
-                }
             }
         }
 
