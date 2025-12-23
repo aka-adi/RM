@@ -1063,14 +1063,14 @@ SegBtv *Rabit::range_res(int tid, uint32_t start, uint32_t range)
                 _xor_btv(*res, l - 1, trans);
                 _xor_btv(*res, U_s, trans);
                 for(uint32_t i = group_s + 1; i <= group_t - 1; i++) {
-                    uint32_t U_j = i * group_len;
+                    uint32_t U_j = (i + 1) * group_len - 1;
                     _or_btv(*res, U_j, trans);
                 }
                 _or_btv(*res, r, trans);
             } else {  // l是区间I_s的左端点L_s
                 // 范围为IR_{U_s} ∨ (∨_{j=s+1}^{t-1} IR_{U_j}) ∨ IR_r
                 for(uint32_t i = group_s; i <= group_t - 1; i++) {
-                    uint32_t U_j = i * group_len;
+                    uint32_t U_j = (i + 1) * group_len - 1;
                     _or_btv(*res, U_j, trans);
                 }
                 _or_btv(*res, r, trans);
