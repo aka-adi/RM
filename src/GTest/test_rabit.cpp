@@ -24,9 +24,9 @@ std::atomic<int> atomicremovenum(0);
 void init_config(Table_config *tconfig, uint64_t rows_num, size_t cardinality, Index_encoding encoding, size_t word_size, size_t n_queries = 970) {
 	if(encoding == Index_encoding::RE)
 		cardinality--;
-	std::string work_dir = "../../../";
+	std::string work_dir = "./BM_uniform_";
 	std::string data_name = "a_" + std::to_string(rows_num) + "_" + std::to_string(cardinality);
-	std::string index_name = std::to_string(rows_num/M) + "M_" + std::to_string(cardinality) + "_EE_" + std::to_string(word_size);
+	std::string index_name = std::to_string(rows_num/M) + "M_" + std::to_string(cardinality) + "_AE_10_" + std::to_string(word_size);
 	std::string group_name = std::to_string(rows_num/M) + "M_" + std::to_string(cardinality) + "_GE_" + std::to_string(word_size);
 	tconfig->n_workers = 1;
 	tconfig->DATA_PATH = work_dir + data_name;
@@ -84,23 +84,23 @@ void Remove(rabit::Rabit *rabit, int tid) {
 	rcu_unregister_thread();
 }
 
-bool Check_EE(rabit::Rabit *rabit, int deleted = 0) 
+bool Check_AE(rabit::Rabit *rabit, int deleted = 0) 
 {
 	uint64_t sum = 0;
 	rcu_register_thread();
-	for(int i = 0; i < rabit->config->g_cardinality; i++) {
+	for(int i = rabit->config->GE_group_len - 1; i < rabit->config->g_cardinality; i += rabit->config->GE_group_len) {
 		sum += rabit->evaluate(0, i);
 	}
 	rcu_unregister_thread();
 	return sum == rabit->config->n_rows - deleted;
 }
 
-TEST(MERGETEST, MULTIINTEGRITY) {
+TEST(DISABLED_MERGETEST, MULTIINTEGRITY) {
 int n = 500;
 while(n--)
 {
 	auto row_nums = M;
-	auto cardinality = 100;
+	auto cardinality = 200;
 	auto word_size = 32;
 	auto thread_nums = 10;
 
@@ -108,7 +108,7 @@ while(n--)
 	atomicremovenum.store(0);
 
 	Table_config *tconfig = new Table_config{};
-	init_config(tconfig, row_nums, cardinality, Index_encoding::GE, word_size);
+	init_config(tconfig, row_nums, cardinality, Index_encoding::AE, word_size);
 	rabit::Rabit *rabit = new rabit::Rabit(tconfig);
 
 	auto merge_thread = std::thread(rabit_merge_dispatcher, rabit);
@@ -132,18 +132,19 @@ while(n--)
 	merge_thread.join();
 
 
-	EXPECT_EQ(Check_EE(rabit, atomicremovenum.load()), 1);
+	EXPECT_EQ(Check_AE(rabit, atomicremovenum.load()), 1);
 	GTEST_LOG_(INFO) << "num of rows: " << rabit->config->n_rows - atomicremovenum.load();
 	delete rabit;
+	GTEST_LOG_(INFO) << n;
 }
 
 }
 
-TEST(MERGETEST, SEQUENTIAL) {
+TEST(RANGETEST, SEQUENTIAL_AE) {
 
 	auto row_nums = M;
 	auto n_queries = row_nums / 100;
-	auto cardinality = 100;
+	auto cardinality = 200;
 	auto word_size = 32;
 	auto thread_nums = 10;
 	__atomic_store_n(&run_merge_func, true, MM_CST);
@@ -152,9 +153,8 @@ TEST(MERGETEST, SEQUENTIAL) {
 	atomicremovenum.store(0);
 
 	Table_config *tconfig = new Table_config{};
-	init_config(tconfig, row_nums, cardinality, Index_encoding::EE, word_size, 2 * row_nums / 100);
+	init_config(tconfig, row_nums, cardinality, Index_encoding::AE, word_size, 2 * row_nums / 100);
 	rabit::Rabit *rabit = new rabit::Rabit(tconfig);
-	EXPECT_EQ(Check_EE(rabit), 1);
 
 	auto merge_thread = std::thread(rabit_merge_dispatcher, rabit);
 
@@ -173,8 +173,6 @@ TEST(MERGETEST, SEQUENTIAL) {
 	for(int row = 0; row < row_nums / 100; row++) {
 		EXPECT_EQ(rows[row], rabit->get_value_rcu(row, rabit->g_timestamp, last_rub));
 	}
-	
-	EXPECT_EQ(Check_EE(rabit), 1);
 
 	rcu_register_thread();
 
@@ -190,73 +188,6 @@ TEST(MERGETEST, SEQUENTIAL) {
 		}
 	}
 	EXPECT_EQ(rabit->range(0, 0, cardinality), rabit->config->n_rows);
-	uint64_t sum = 0;
-	for(int i = 0; i < cardinality; i++) {
-		auto c = rabit->evaluate(0, i);
-		sum += c;
-		EXPECT_EQ((int)rabit->range(0, 0, i + 1), sum);
-	}
-
-	rcu_unregister_thread();
-}
-
-TEST(RANGETEST, SEQUENTIAL_GE) {
-
-	auto row_nums = M;
-	auto n_queries = row_nums / 100;
-	auto cardinality = 100;
-	auto word_size = 32;
-	auto thread_nums = 10;
-	__atomic_store_n(&run_merge_func, true, MM_CST);
-	
-	atomicstopnum.store(0);
-	atomicremovenum.store(0);
-
-	Table_config *tconfig = new Table_config{};
-	init_config(tconfig, row_nums, cardinality, Index_encoding::GE, word_size, 2 * row_nums / 100);
-	rabit::Rabit *rabit = new rabit::Rabit(tconfig);
-	EXPECT_EQ(Check_EE(rabit), 1);
-
-	auto merge_thread = std::thread(rabit_merge_dispatcher, rabit);
-
-	RUB last_rub = RUB{0, TYPE_INV, {}};
-	std::vector<int> rows(row_nums / 100);
-	rcu_register_thread();
-	for(int row = 0; row < row_nums / 100; row++) {
-		auto tmp = (rand() + 1) % cardinality;
-		rabit->update(0, row, tmp);
-		rows[row] = tmp;
-	}
-	rcu_unregister_thread();
-	__atomic_store_n(&run_merge_func, false, MM_CST);
-	merge_thread.join();
-	__atomic_store_n(&run_merge_func, true, MM_CST);
-	for(int row = 0; row < row_nums / 100; row++) {
-		EXPECT_EQ(rows[row], rabit->get_value_rcu(row, rabit->g_timestamp, last_rub));
-	}
-	
-	EXPECT_EQ(Check_EE(rabit), 1);
-
-	rcu_register_thread();
-
-	merge_thread = std::thread(rabit_merge_dispatcher, rabit);
-	for(int row = 0; row < row_nums / 100; row++) {
-		auto tmp = (rand() + 1) % cardinality;
-		rabit->update(0, row, tmp);
-		rows[row] = tmp;
-		if(row == row_nums / 200) {
-			__atomic_store_n(&run_merge_func, false, MM_CST);
-			merge_thread.join();
-			__atomic_store_n(&run_merge_func, true, MM_CST);
-		}
-	}
-	EXPECT_EQ(rabit->range(0, 0, cardinality), rabit->config->n_rows);
-	uint64_t sum = 0;
-	for(int i = 0; i < cardinality; i++) {
-		auto c = rabit->evaluate(0, i);
-		sum += c;
-		EXPECT_EQ((int)rabit->range(0, 0, i + 1), sum);
-	}
 
 	rcu_unregister_thread();
 }

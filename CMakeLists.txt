@@ -75,9 +75,9 @@ target_link_libraries(nicolas bitmap pthread atomic ${Boost_LIBRARIES} ${URCU_LI
 ################################
 #if (test)
 #  # This adds another subdirectory, which has 'project(gtest)'.
-#  add_subdirectory(src/gtest)
+add_subdirectory(src/GTest)
 #
-#  enable_testing()
+enable_testing()
 #
 #  # Include the gtest library. gtest_SOURCE_DIR is available due to
 #  # 'project(gtest)' above.
