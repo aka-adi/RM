@@ -55,7 +55,18 @@ struct Bitvector {
     SegBtv *seg_btv;
     Bitvector *next;
     std::set<uint32_t> replace_list;
-    ~Bitvector() {if(next) delete next; if(btv) delete btv; if(seg_btv) delete seg_btv;}
+    ~Bitvector() {
+        if(next)
+            delete next;
+        next = nullptr;
+        if(seg_btv)
+            delete seg_btv;
+        seg_btv = nullptr;
+        // no btv
+        // if(btv)
+        //     delete btv;
+        // btv = nullptr;
+    }
 } DOUBLE_CACHE_ALIGNED;
 
 static inline
@@ -64,6 +75,7 @@ void free_bitvector_cb(struct rcu_head *head)
     struct Bitvector *Btv = caa_container_of(head, struct Bitvector, head);
     if (Btv->seg_btv)
         delete Btv->seg_btv;
+    Btv->seg_btv = nullptr;
     delete Btv;
 }
 
@@ -140,7 +152,7 @@ public:
     typedef std::unordered_map<uint32_t, seg_rids> pos_segs;
 
     Rabit(Table_config *);
-    ~Rabit() { int e=config->g_cardinality-(config->encoding != EE); for(int i = 0; i < e; i++) {delete Btvs[i];} }
+    ~Rabit() { for(int i = 0; i < num_btvs; i++) {if(Btvs[i]) delete Btvs[i]; Btvs[i] = nullptr;} }
 
     int append(int, int, uint64_t row_id);
     int append(int, int);

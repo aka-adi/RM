@@ -93,7 +93,7 @@ struct btv_seg {
                 {btv = new ibis::bitvector(); buffer = new btv_buffer(); next = nullptr;};
     btv_seg(const btv_seg &rhs) : id(rhs.id), start_row(rhs.start_row), end_row(rhs.end_row)
                 {btv = new ibis::bitvector(); btv->adjustSize(0, rhs.btv->size()); buffer = new btv_buffer(); };
-    ~btv_seg() {if(btv) delete btv; if(buffer) delete buffer;};
+    ~btv_seg() {if(btv) delete btv; btv = nullptr; if(buffer) delete buffer; buffer = nullptr;};
     void setbit(uint64_t row_id,int val, Table_config *config) 
                 {assert(row_id <= end_row); assert(row_id >= start_row); btv->setBit(row_id - start_row, val, config);};
 };

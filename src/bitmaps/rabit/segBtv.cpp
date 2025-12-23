@@ -97,7 +97,9 @@ SegBtv::~SegBtv()
 {
     for (auto & [id_t, seg_t] : seg_table) 
     {
-        delete seg_t;
+        if (seg_t)
+            delete seg_t;
+        seg_t = nullptr;
     }
 }
 
