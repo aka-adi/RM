@@ -135,7 +135,7 @@ def process_data_files(input_realdata):
 # 使用示例
 if __name__ == "__main__":
     # 配置参数
-    input_data = "census1881" 
+    input_data = "wikileaks-noquotes" 
     
     # 调用函数
     process_data_files(input_data)
