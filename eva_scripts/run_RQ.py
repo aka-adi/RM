@@ -6,13 +6,15 @@ import time
 from decimal import Decimal
 M = 1000000
 
+#uniform
 approaches = ['rabit', 'cubit-lk', 'ub']
 cardinalities = ['1000']
-rows = 100*M
-radio = [Decimal('0'), Decimal('0.1'), Decimal('0.2'), Decimal('0.4'), Decimal('0.8'), Decimal('0.9'), Decimal('1.0')]
-ranges = [50, 100, 150, 200, 250, 300, 350, 400, 450]
+rows = 10 * M
+radio = [Decimal('1.0'), Decimal('0.9'), Decimal('0.8'), Decimal('0.6'), Decimal('0.4'), Decimal('0.2'), Decimal('0.1'), Decimal('0.0')]
+# 5% 15% 25% 35% 45%
+ranges = [50, 150, 250, 350, 450]
 workers = 16
-group_len = [100, 200, 400]
+group_len = [10, 20]
 total = 200
 word_size = 32
 
@@ -42,13 +44,13 @@ word_size = 32
 #     return average_number
 
 def range_query(w, a, c, total, queries_ratio, rows, e, group_len, q_range, v, out_dir):
-    index_path = "BM_" + str(int(rows / M)) + "M_" + str(c) + "_"
+    index_path = "BM_uniform_" + str(int(rows / M)) + "M_" + str(c) + "_"
     if (e == "EE"):
         index_path = index_path + "EE_" + str(word_size)
     elif (e == "RE"):
         index_path = index_path + "RE_" + str(word_size)
-    elif (e == "GE"):
-        index_path = index_path + "EE_" + str(word_size)
+    elif (e == "AE"):
+        index_path = index_path + "AE_" + str(group_len) + "_" + str(word_size)
     else:
         print("ERROR: Unknow encoding mode!!!")
 
@@ -82,7 +84,7 @@ def main():
     for a in approaches:
         e = ""
         if a == "rabit":
-            e = "GE"
+            e = "AE"
         elif a == "cubit-lk":
             e = "EE"
         elif a == "ub":
@@ -93,7 +95,7 @@ def main():
         for c in cardinalities:
             for q in radio:
                 for r in ranges:
-                    if e == "GE":
+                    if e == "AE":
                         for l in group_len:
                             range_query(workers, a, c, total, q, rows, e, l, r, 'false', eva_directory_name)
                             range_query(workers, a, c, total, q, rows, e, l, r, 'true', eva_directory_name)
