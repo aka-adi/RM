@@ -5,20 +5,20 @@ RAW_DATA_DIR = "raw_data"
 DISTILLED_DATA_DIR = "distilled_data"
 GRAPHS_DIR = "graphs"
 
-ROWS = (100*1000*1000)
+ROWS = (10*1000*1000)
 CARDINALITY = 1000
 WORKERS = 16
 ALGORITHMS = ["rabit", "cubit-lk", "ub"]
 
-UDI_RATIO_RE = ["0.0", "0.02", "0.05", "0.1", "0.2", "0.3", "0.4", "0.5"]
-UDI_RATIO_NORMAL = ["0.0", "0.1", "0.2", "0.3", "0.4", "0.5"]
+UDI_RATIO_RE = ["0.0", "0.1", "0.2", "0.4"]
+UDI_RATIO_NORMAL = ["0.0", "0.1", "0.2", "0.4", "0.6"]
 
 RQ_RANGE_FIX = 0.15
 
 RQ_RANGE = [0.05, 0.15, 0.25, 0.35, 0.45]
 UDI_RATIO_FIX = 0.2
 
-GE_GROUP_SIZE = [50, 100, 200]
+AE_GROUP_SIZES = [10, 20]
 
 global distilled_data_directory
 global graphs_directory
@@ -56,9 +56,9 @@ def throughput_analysis(filename):
 
 
 def analyse_throughput_varying_UDI_rabit(directory_path):
-    for ge_group_size in GE_GROUP_SIZE:
+    for AE_GROUP_SIZE in AE_GROUP_SIZES:
         experiment_name = f"eva_rabit_throughput_{int(ROWS/1000000)}M_c_{CARDINALITY}_w_{WORKERS}"
-        output_file_name = os.path.join(directory_path, DISTILLED_DATA_DIR, experiment_name + f"_GL_{ge_group_size}_vary_UDI.distilled")
+        output_file_name = os.path.join(directory_path, DISTILLED_DATA_DIR, experiment_name + f"_GL_{AE_GROUP_SIZE}_vary_UDI.distilled")
         
         if os.path.exists(output_file_name):
             print(f"Output file '{output_file_name}' already exists. Skip the analysis.")
@@ -68,7 +68,7 @@ def analyse_throughput_varying_UDI_rabit(directory_path):
         output_file.write('# UDI ratio (% of operations) \t Throughput (op/s) \n')
 
         for udi in UDI_RATIO_NORMAL:
-            src_file = os.path.join(directory_path, RAW_DATA_DIR, experiment_name + f"_ratio_{udi}" + f"_range_{int(RQ_RANGE_FIX*CARDINALITY)}_GL_{ge_group_size}.rawdata")
+            src_file = os.path.join(directory_path, RAW_DATA_DIR, experiment_name + f"_ratio_{udi}" + f"_range_{int(RQ_RANGE_FIX*CARDINALITY)}_GL_{AE_GROUP_SIZE}.rawdata")
             ret = throughput_analysis(src_file)
         
             output_file.write('{} \t\t {} \n'.format(int(float(udi)*100), f"{ret:.2f}"))
@@ -116,9 +116,9 @@ def analyse_throughput_varying_UDI(directory_path):
 
 
 def analyse_throughput_varying_range_rabit(directory_path):
-    for ge_group_size in GE_GROUP_SIZE:
+    for AE_GROUP_SIZE in AE_GROUP_SIZES:
         experiment_name = "eva_rabit_throughput_{}M_c_{}_w_{}_ratio_{}".format(int(ROWS/1000000), CARDINALITY, WORKERS, UDI_RATIO_FIX)
-        output_file_name = os.path.join(directory_path, DISTILLED_DATA_DIR, experiment_name + f"_GL_{ge_group_size}_vary_QL.distilled")
+        output_file_name = os.path.join(directory_path, DISTILLED_DATA_DIR, experiment_name + f"_GL_{AE_GROUP_SIZE}_vary_QL.distilled")
 
         if os.path.exists(output_file_name):
             print(f"Output file '{output_file_name}' already exists. Skip the analysis.")
@@ -128,7 +128,7 @@ def analyse_throughput_varying_range_rabit(directory_path):
         output_file.write('# Range (% of cardinality) \t Throughput (op/s) \n')
 
         for rq_range in RQ_RANGE:
-            src_file = os.path.join(directory_path, RAW_DATA_DIR, experiment_name + f"_range_{int(rq_range*CARDINALITY)}" + f"_GL_{ge_group_size}.rawdata")
+            src_file = os.path.join(directory_path, RAW_DATA_DIR, experiment_name + f"_range_{int(rq_range*CARDINALITY)}" + f"_GL_{AE_GROUP_SIZE}.rawdata")
 
             ret = throughput_analysis(src_file)
         
@@ -261,9 +261,9 @@ def analyse_latency_varying_range(directory_path):
         output_file.write('# Range (% of cardinality) \t Query Latency (ms) \t RQ (ms) \t Update (ms) \t Delete (ms) \t Insert (ms)\n')
 
         for rq_range in RQ_RANGE:
-            src_file = os.path.join(directory_path, RAW_DATA_DIR, experiment_name + f"_range_{int(rq_range*CARDINALITY)}")
+            src_file = os.path.join(directory_path, RAW_DATA_DIR, experiment_name + f"_range_{int(rq_range*CARDINALITY)}_")
             if alg == "rabit":
-                src_file += "GL_100.rawdata"
+                src_file += "GL_10.rawdata"
             else:
                 src_file += "GL_0.rawdata"
 
@@ -314,18 +314,6 @@ if __name__ == "__main__":
 
     analyse_throughput_varying_range(directory_path)
 
-    #     analyse_latency_varying_range(directory_path)
-
-
-    ### Draw figures ###    
-    create_directory(os.path.join(directory_path, GRAPHS_DIR))
-
-    draw_throughput_varying_UDI(directory_path)
-
-    draw_throughput_varying_range(directory_path)
-
-    #     draw_latency_varying_range(directory_path)
-
-    convert_eps_to_pdf(directory_path)
+    analyse_latency_varying_range(directory_path)
 
     print("All analyses are done.")
