@@ -6,9 +6,9 @@ import time
 from decimal import Decimal
 M = 1000000
 
-approaches = ['rabit', 'cubit-lk']
+approaches = ['rabit']
 cardinalities = ['256', '512', '1024', '2048']
-rows = 1*M
+rows = 10*M
 radio = [Decimal('1.0')]
 ranges = 0.35
 workers = 16
