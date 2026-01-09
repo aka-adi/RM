@@ -114,6 +114,29 @@ def analyse_throughput_varying_cardinality(directory_path):
         else:
             analyse_throughput_varying_cardinality_common(directory_path, alg)
 
+def draw_throughput_varying_cardinality(directory_path):    
+    # invoke gnuplot script
+    gnu_command = "gnuplot -e 'directory_path=\"" + directory_path + "\"' eva_scripts/gnuplot_scripts/throughput_vs_cardinality.gnuplot" 
+    print("Generating graph Throughput vs. cardinality using command \n\t" + gnu_command)
+    os.system(gnu_command)
+    print("\tGraphs are generated in the directory : " + os.path.join(directory_path, GRAPHS_DIR) + "\n")
+
+def convert_eps_to_pdf(directory_path):
+    # if epstopdf is not installed, return
+    if os.system("which epstopdf") != 0:
+        print("epstopdf is not installed. Skip converting eps files to pdf files.")
+        return    
+
+    eps_files = os.listdir(os.path.join(directory_path, GRAPHS_DIR))
+    print (f"Convert eps files in {eps_files} to pdf files.")
+    for eps_file in eps_files:
+        if eps_file.endswith(".eps"):
+            pdf_file = eps_file.replace(".eps", ".pdf")
+            eps_file_path = os.path.join(directory_path, GRAPHS_DIR, eps_file)
+            pdf_file_path = os.path.join(directory_path, GRAPHS_DIR, pdf_file)
+            os.system(f"epstopdf {eps_file_path} --outfile={pdf_file_path}")
+            print(f"Converted {eps_file_path} to {pdf_file_path}")
+
 if __name__ == "__main__":
     if len(sys.argv) != 3:
         print("Usage: python analyse_range.py <directory_path> (clean|analyse)")
@@ -132,6 +155,10 @@ if __name__ == "__main__":
     create_directory(os.path.join(directory_path, DISTILLED_DATA_DIR))
 
     analyse_throughput_varying_cardinality(directory_path)
+    
+    create_directory(os.path.join(directory_path, GRAPHS_DIR))
+    draw_throughput_varying_cardinality(directory_path)
+    convert_eps_to_pdf(directory_path)
 
 
     print("All analyses are done.")
