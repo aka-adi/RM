@@ -315,5 +315,10 @@ if __name__ == "__main__":
     analyse_throughput_varying_range(directory_path)
 
     analyse_latency_varying_range(directory_path)
+    
+    create_directory(os.path.join(directory_path, GRAPHS_DIR))
+    draw_throughput_varying_UDI(directory_path)
+    draw_throughput_varying_range(directory_path)
+    convert_eps_to_pdf(directory_path)
 
     print("All analyses are done.")
