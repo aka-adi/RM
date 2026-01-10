@@ -2,12 +2,12 @@
 
 reset
 
-# 设置终端和输出文件 - 更大的尺寸以容纳4个子图
-set terminal eps size 8, 6 font 'Linux Libertine O,20'
-set output sprintf("%s/graphs/Figure_latency_subplots.eps", directory_path)
+# 设置终端和输出文件 - 更宽的尺寸以容纳4个水平子图
+set terminal eps size 12, 3.5 font 'Linux Libertine O,20'
+set output sprintf("%s/graphs/Figure_latency_horizontal_subplots.eps", directory_path)
 
-# 设置4个子图布局 (2行2列)
-set multiplot layout 2,2 rowsfirst
+# 设置4个子图布局 (1行4列)
+set multiplot layout 1,4
 set tmargin 1.4
 set bmargin 2.0
 set lmargin 6.0
