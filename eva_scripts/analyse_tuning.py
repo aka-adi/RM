@@ -125,6 +125,14 @@ def analyse_latency_varying_cardinality(directory_path):
             print("Output file is created at " + output_file.name + "\n")
             output_file.close()
 
+def draw_latency_varying_GL(directory_path):
+    # invoke gnuplot script
+    gnu_command = "gnuplot -e 'directory_path=\"" + directory_path + "\"' eva_scripts/gnuplot_scripts/latency_vs_GL.gnuplot" 
+    print("Generating graphs using command \n\t" + gnu_command)
+    os.system(gnu_command)
+    print("\tGraphs are generated in the directory : " + os.path.join(directory_path, GRAPHS_DIR) + "\n")
+
+
 def convert_eps_to_pdf(directory_path):
     # if epstopdf is not installed, return
     if os.system("which epstopdf") != 0:
@@ -159,5 +167,9 @@ if __name__ == "__main__":
     create_directory(os.path.join(directory_path, DISTILLED_DATA_DIR))
 
     analyse_latency_varying_cardinality(directory_path)
+    
+    create_directory(os.path.join(directory_path, GRAPHS_DIR))
+    draw_latency_varying_GL(directory_path)
+    convert_eps_to_pdf(directory_path)
 
     print("All analyses are done.")
