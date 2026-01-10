@@ -10,8 +10,8 @@ set yrange [5:1000]
 set xtics offset 0,0.5,0 font 'Linux Libertine O,20' (5, 15, 25, 35, 45)
 set ytics offset 0.2,0,0 font 'Linux Libertine O,20' ("10" 10, "10^2" 100, "10^3" 1000)
 
-set xlabel offset 0,1.3,0 font 'Linux Libertine O,20' "查询范围（%）" 
-set ylabel offset 2.0,0,0  font 'Linux Libertine O,20' "吞吐量（每秒）"
+set xlabel offset 0,1.3,0 font 'Linux Libertine O,20' "Query range (% of cardinality)" 
+set ylabel offset 2.0,0,0  font 'Linux Libertine O,20' "Throughput (op/s)"
 
 set key font "Linux Libertine O,15" reverse outside top center Left width 2.5
 set key maxrows 1

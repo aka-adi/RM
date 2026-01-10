@@ -19,8 +19,8 @@ set yrange [0:700]
 set logscale x
 set xtics offset 0.2,0.4,0 font 'Linux Libertine O,20' (1, 2, 4, 8, 16, 32)
 set ytics offset 0.2,0,0 font 'Linux Libertine O,20' (0, 200, 400, 600)
-set xlabel "区间长度" font 'Linux Libertine O,20' offset 0,1.0
-set ylabel "延迟(毫秒)" font 'Linux Libertine O,20' offset 1.5,0
+set xlabel "Interval length" font 'Linux Libertine O,20' offset 0,1.0
+set ylabel "Latency(ms)" font 'Linux Libertine O,20' offset 1.5,0
 set key font "Linux Libertine O,15" inside top right right
 plot sprintf("%s/distilled_data/eva_rabit_latency_10M_c_256_w_16_ratio_0.2.distilled", directory_path) u 1:3 t "RQ(C=256)" lc rgb "blue" lw 4 ps 1.5 pt 6 with linespoints,\
     sprintf("%s/distilled_data/eva_rabit_latency_10M_c_256_w_16_ratio_0.2.distilled", directory_path) u 1:4 t "Update(C=256)" lc rgb "red" lw 4 ps 1.5 pt 4 with linespoints axes x1y1

@@ -11,8 +11,8 @@ set yrange [10:300]
 set xtics offset 0.2,0.4,0 font 'Linux Libertine O,20' ("2^8" 256, "2^9" 512, "2^{10}" 1024, "2^{11}" 2048)
 set ytics offset 0.2,0,0 font 'Linux Libertine O,20' (10, 50, 100, 200)
 
-set xlabel offset 0,1.2,0 font 'Linux Libertine O,20' "基数" 
-set ylabel offset 2.8,0,0  font 'Linux Libertine O,20' "吞吐量(每秒)"
+set xlabel offset 0,1.2,0 font 'Linux Libertine O,20' "Cardinality" 
+set ylabel offset 2.8,0,0  font 'Linux Libertine O,20' "Throughput (op/s)"
 
 set key font "Linux Libertine O,15" reverse inside right box
 set key maxrows 4
