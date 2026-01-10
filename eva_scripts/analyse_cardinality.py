@@ -137,6 +137,32 @@ def convert_eps_to_pdf(directory_path):
             os.system(f"epstopdf {eps_file_path} --outfile={pdf_file_path}")
             print(f"Converted {eps_file_path} to {pdf_file_path}")
 
+def convert_eps_to_png(directory_path, dpi=1200):
+    # if ghostscript is not installed, return
+    if os.system("which gs") != 0:
+        print("ghostscript is not installed. Skip converting eps files to png files.")
+        return    
+
+    # 确保DPI大于1000
+    if dpi <= 1000:
+        print(f"WARNING: DPI setting ({dpi}) is too low, using 1200 DPI instead.")
+        dpi = 1200
+    
+    eps_files = os.listdir(os.path.join(directory_path, GRAPHS_DIR))
+    print(f"Convert eps files in {os.path.join(directory_path, GRAPHS_DIR)} to png files with {dpi} DPI.")
+    
+    for eps_file in eps_files:
+        if eps_file.endswith(".eps"):
+            png_file = eps_file.replace(".eps", ".png")
+            eps_file_path = os.path.join(directory_path, GRAPHS_DIR, eps_file)
+            png_file_path = os.path.join(directory_path, GRAPHS_DIR, png_file)
+            
+            # 使用ghostscript将EPS转换为PNG
+            gs_command = f"gs -dSAFER -dBATCH -dNOPAUSE -dEPSCrop -r{dpi} -sDEVICE=pngalpha -sOutputFile={png_file_path} {eps_file_path}"
+            os.system(gs_command)
+            print(f"Converted {eps_file} to {png_file} with {dpi} DPI")
+
+
 if __name__ == "__main__":
     if len(sys.argv) != 3:
         print("Usage: python analyse_range.py <directory_path> (clean|analyse)")
@@ -158,7 +184,7 @@ if __name__ == "__main__":
     
     create_directory(os.path.join(directory_path, GRAPHS_DIR))
     draw_throughput_varying_cardinality(directory_path)
-    convert_eps_to_pdf(directory_path)
+    convert_eps_to_png(directory_path)
 
 
     print("All analyses are done.")
