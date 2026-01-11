@@ -6,6 +6,7 @@
 #include "nicolas/util.h"
 #include "bitmaps/rabit/segBtv.h"
 #include "bitmaps/rabit/table.h"
+#include <queue>
 
 using namespace std;
 using namespace rabit;
@@ -1229,24 +1230,64 @@ TransDesc * TransDesc::get_rubs(TransDesc *trans_end, std::map<uint64_t, RUB> &r
 void Rabit::merge_worker(pos_segs& pos_seg, TransDesc* worker_trans_start,
                     TransDesc* worker_trans_end , uint32_t begin, uint32_t end)
 {
-    for(auto btv_idx = begin; btv_idx != end; ++btv_idx)
-    {
-        auto Btv = get_btv(btv_idx);
-        //replace bitvector
-        for(auto seg_id : Btv->replace_list) {
-            Btv->seg_btv->Replacesegbtv(seg_id, Btv->log_shortcut->l_commit_ts, config);
+    if(config->encoding == AE) {
+        // 获取区间长度
+        auto gl = this->config->GE_group_len;
+        // 两个队列存储位向量位置
+        std::queue<uint32_t> btv_queue;
+        std::queue<uint32_t> btv_queue2;
+        for(auto btv_idx = begin; btv_idx != end; ++btv_idx)
+        {
+            if(btv_idx % gl == gl - 1)
+                btv_queue.push(btv_idx);
+            else
+                btv_queue2.push(btv_idx);
         }
-        Btv->replace_list.clear();
-
-        // write buffer
-        auto s = pos_seg.find(btv_idx);
-        if(s != pos_seg.end()) {
-            write_rids_to_buffer(s->second, btv_idx, worker_trans_end->l_commit_ts);
+        // queue2添加到queue
+        while(!btv_queue2.empty()) {
+            btv_queue.push(btv_queue2.front());
+            btv_queue2.pop();
         }
+        while(!btv_queue.empty()) {
+            auto btv_idx = btv_queue.front();
+            btv_queue.pop();
+            auto Btv = get_btv(btv_idx);
+            //replace bitvector
+            for(auto seg_id : Btv->replace_list) {
+                Btv->seg_btv->Replacesegbtv(seg_id, Btv->log_shortcut->l_commit_ts, config);
+            }
+            Btv->replace_list.clear();
 
-        // update start trans
-        __atomic_store_n(&Btv->log_shortcut, worker_trans_end, MM_RELEASE);
+            // write buffer
+            auto s = pos_seg.find(btv_idx);
+            if(s != pos_seg.end()) {
+                write_rids_to_buffer(s->second, btv_idx, worker_trans_end->l_commit_ts);
+            }
+
+            // update start trans
+            __atomic_store_n(&Btv->log_shortcut, worker_trans_end, MM_RELEASE);
+        }
+    } else {
+        for(auto btv_idx = begin; btv_idx != end; ++btv_idx)
+        {
+            auto Btv = get_btv(btv_idx);
+            //replace bitvector
+            for(auto seg_id : Btv->replace_list) {
+                Btv->seg_btv->Replacesegbtv(seg_id, Btv->log_shortcut->l_commit_ts, config);
+            }
+            Btv->replace_list.clear();
+
+            // write buffer
+            auto s = pos_seg.find(btv_idx);
+            if(s != pos_seg.end()) {
+                write_rids_to_buffer(s->second, btv_idx, worker_trans_end->l_commit_ts);
+            }
+
+            // update start trans
+            __atomic_store_n(&Btv->log_shortcut, worker_trans_end, MM_RELEASE);
+        }
     }
+
 
 }
 
