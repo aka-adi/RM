@@ -189,6 +189,13 @@ def draw_throughput_varying_UDI(directory_path):
     os.system(gnu_command)
     print("\tGraphs are generated in the directory : " + os.path.join(directory_path, GRAPHS_DIR) + "\n")
 
+def draw_throughput_varying_2(directory_path):    
+    # invoke gnuplot script
+    gnu_command = "gnuplot -e 'directory_path=\"" + directory_path + "\"' eva_scripts/gnuplot_scripts/throughput_vs_2.gnuplot" 
+    print("Generating graph Throughput vs. 2 using command \n\t" + gnu_command)
+    os.system(gnu_command)
+    print("\tGraphs are generated in the directory : " + os.path.join(directory_path, GRAPHS_DIR) + "\n")
+
 def draw_latency_varying_range(directory_path):
     # invoke gnuplot script
     gnu_command = "gnuplot -e 'directory_path=\"" + directory_path + "\"' eva_scripts/gnuplot_scripts/latency_vs_query_range.gnuplot" 
@@ -344,6 +351,7 @@ if __name__ == "__main__":
     create_directory(os.path.join(directory_path, GRAPHS_DIR))
     draw_throughput_varying_UDI(directory_path)
     draw_throughput_varying_range(directory_path)
+    draw_throughput_varying_2(directory_path)
     convert_eps_to_png(directory_path)
 
     print("All analyses are done.")
