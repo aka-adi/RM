@@ -32,10 +32,10 @@ set key maxrows 1
 
 set logscale y
 
-plot sprintf("%s/distilled_data/eva_rabit_throughput_10M_c_1000_w_16_GL_10_vary_UDI.distilled", directory_path) title "IRE(C/128)" lc rgb "blue" lw 8 ps 1.5 pt 6 with linespoints,\
-     sprintf("%s/distilled_data/eva_rabit_throughput_10M_c_1000_w_16_GL_20_vary_UDI.distilled", directory_path) title "IRE(C/64)" lc rgb "dark-blue" lw 8 ps 1.5 pt 4 with linespoints,\
-     sprintf("%s/distilled_data/eva_cubit-lk_throughput_10M_c_1000_w_16_vary_UDI.distilled", directory_path) notitle lc rgb "brown" lw 8 ps 1.5 pt 8 dt "-" with linespoints,\
-     sprintf("%s/distilled_data/eva_ub_throughput_10M_c_1000_w_16_vary_UDI.distilled", directory_path) notitle  lc rgb "sea-green" lw 8 ps 1.5 pt 10 dt 9 with linespoints
+plot sprintf("%s/distilled_data/eva_rabit_throughput_10M_c_1000_w_16_GL_10_vary_UDI.distilled", directory_path) title "IRE(C/128)" lc rgb "black" lw 8 ps 1.5 pt 6 with linespoints,\
+     sprintf("%s/distilled_data/eva_rabit_throughput_10M_c_1000_w_16_GL_20_vary_UDI.distilled", directory_path) title "IRE(C/64)" lc rgb "black" lw 8 ps 1.5 pt 4 with linespoints,\
+     sprintf("%s/distilled_data/eva_cubit-lk_throughput_10M_c_1000_w_16_vary_UDI.distilled", directory_path) notitle lc rgb "black" lw 8 ps 1.5 pt 8 dt "-" with linespoints,\
+     sprintf("%s/distilled_data/eva_ub_throughput_10M_c_1000_w_16_vary_UDI.distilled", directory_path) notitle  lc rgb "black" lw 8 ps 1.5 pt 10 dt 9 with linespoints
 
 unset label
 
@@ -54,9 +54,9 @@ set label "b) Throughput vs Query Range" at graph 0.5, -0.33 font 'Linux Liberti
 
 set logscale y
 
-plot sprintf("%s/distilled_data/eva_rabit_throughput_10M_c_1000_w_16_ratio_0.2_GL_10_vary_QL.distilled", directory_path) notitle lc rgb "blue" lw 8 ps 1.5 pt 6 with linespoints,\
-     sprintf("%s/distilled_data/eva_rabit_throughput_10M_c_1000_w_16_ratio_0.2_GL_20_vary_QL.distilled", directory_path) notitle lc rgb "dark-blue" lw 8 ps 1.5 pt 4 with linespoints,\
-     sprintf("%s/distilled_data/eva_cubit-lk_throughput_10M_c_1000_w_16_ratio_0.2_vary_QL.distilled", directory_path) title "EE" lc rgb "brown" lw 8 ps 1.5 pt 8 dt "-" with linespoints,\
-     sprintf("%s/distilled_data/eva_ub_throughput_10M_c_1000_w_16_ratio_0.2_vary_QL.distilled", directory_path) title "RE" lc rgb "sea-green" lw 8 ps 1.5 pt 10 dt 9 with linespoints
+plot sprintf("%s/distilled_data/eva_rabit_throughput_10M_c_1000_w_16_ratio_0.2_GL_10_vary_QL.distilled", directory_path) notitle lc rgb "black" lw 8 ps 1.5 pt 6 with linespoints,\
+     sprintf("%s/distilled_data/eva_rabit_throughput_10M_c_1000_w_16_ratio_0.2_GL_20_vary_QL.distilled", directory_path) notitle lc rgb "black" lw 8 ps 1.5 pt 4 with linespoints,\
+     sprintf("%s/distilled_data/eva_cubit-lk_throughput_10M_c_1000_w_16_ratio_0.2_vary_QL.distilled", directory_path) title "EE" lc rgb "black" lw 8 ps 1.5 pt 8 dt "-" with linespoints,\
+     sprintf("%s/distilled_data/eva_ub_throughput_10M_c_1000_w_16_ratio_0.2_vary_QL.distilled", directory_path) title "RE" lc rgb "black" lw 8 ps 1.5 pt 10 dt 9 with linespoints
 
 unset multiplot
