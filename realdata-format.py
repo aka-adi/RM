@@ -1,5 +1,7 @@
 import os
 import glob
+import struct
+import random
 from datetime import datetime
 
 
@@ -31,6 +33,45 @@ def create_done_file(base_filename):
         return True
     except Exception as e:
         print(f"Error creating done file: {e}")
+        return False
+
+
+def verify_data(output_filename, original_data):
+    """
+    验证写入文件的数据与原始数据是否一致
+    
+    参数：
+    output_filename: str - 输出文件名
+    original_data: list - 原始数据数组
+    
+    返回：
+    bool - 如果数据一致返回True，否则返回False
+    """
+    try:
+        # 读取文件数据（每个整数占4字节）
+        file_data = []
+        with open(output_filename, 'rb') as f:
+            while True:
+                data = f.read(4)  # 每次读取4字节（一个int）
+                if not data:
+                    break
+                file_data.append(struct.unpack('i', data)[0])
+        
+        # 比较数据长度
+        if len(file_data) != len(original_data):
+            print(f"验证失败: 数据长度不一致，文件中 {len(file_data)} 个整数，原始数据 {len(original_data)} 个整数")
+            return False
+        
+        # 比较数据内容
+        for i, (file_val, orig_val) in enumerate(zip(file_data, original_data)):
+            if file_val != orig_val:
+                print(f"验证失败: 索引 {i} 处数据不一致，文件中 {file_val}，原始数据 {orig_val}")
+                return False
+        
+        print(f"验证成功: 文件 {output_filename} 中的数据与原始数据完全一致")
+        return True
+    except Exception as e:
+        print(f"验证过程中发生错误: {e}")
         return False
 
 
@@ -117,25 +158,81 @@ def process_data_files(input_realdata):
             print(f"错误: 处理文件 {filename} 时发生错误: {e}")
     
     # 数组第一个元素为0则舍弃
-    if data_array[1] == 0:
+    while data_array[0] == 0:
         data_array = data_array[1:]
-        max_row -= 1
+    while data_array[-1] == 0:
+        data_array = data_array[:-1]
     
-    # 数组写入文件中
+    max_row = len(data_array)
+    
+    # 数组写入文件中 - 使用struct.pack('i', value)方式
     output_filename = f"{input_realdata}_dataset_{max_row}_{max_value}"
-    # 二进制写入
+    
+    numsss = 0
+    
     with open(output_filename, 'wb') as f:
-        f.write(bytearray(data_array))
+        for value in data_array:
+            if value != 0:
+                numsss += 1
+            f.write(struct.pack('i', value))
+    
+    print(f"\n数据已成功写入文件: {output_filename}")
+    print(f"有效数据数量: {numsss}")
+    
+    # 验证数据正确性
+    verify_data(output_filename, data_array)
     
     # 创建done文件
     create_done_file(output_filename)
+
+
+def generate_random_data(filename, size, C):
+    """
+    生成随机数据并使用struct.pack('i', r.randint(1, C))方式写入文件
     
+    参数:
+    filename: str - 输出文件名
+    size: int - 数据大小（元素数量）
+    C: int - 随机数范围（1到C）
+    """
+    import random as r
+    
+    print(f"\n开始生成随机数据: {size}个元素，范围1-{C}")
+    
+    with open(filename, 'wb') as f:
+        for _ in range(size):
+            # 使用r.randint(1, C)生成随机整数，然后使用struct.pack('i', ...)写入
+            f.write(struct.pack('i', r.randint(1, C)))
+    
+    print(f"随机数据已成功写入文件: {filename}")
+    
+    # 验证数据
+    # 重新读取文件验证
+    try:
+        valid_count = 0
+        with open(filename, 'rb') as f:
+            while True:
+                data = f.read(4)
+                if not data:
+                    break
+                value = struct.unpack('i', data)[0]
+                if 1 <= value <= C:
+                    valid_count += 1
+                else:
+                    print(f"警告: 找到无效值 {value}")
+        
+        print(f"验证结果: 共读取 {valid_count} 个有效随机数")
+    except Exception as e:
+        print(f"验证随机数据时发生错误: {e}")
 
 
 # 使用示例
 if __name__ == "__main__":
     # 配置参数
-    input_data = "wikileaks-noquotes" 
+    input_data = "census1881" 
     
-    # 调用函数
+    # 调用函数处理真实数据
     process_data_files(input_data)
+    
+    # 可选：生成随机数据示例
+    # generate_random_data("random_data", 1000, 100)
