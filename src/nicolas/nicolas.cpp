@@ -181,10 +181,10 @@ void worker_func(int tid, const string& mode, Table_config *config)
                 int test = rid_distribution(generator);
                 switch (test % 3) {
                     case 0:
-                        _mode = "update";
+                        _mode = "insert";
                         break;
                     case 1:
-                        _mode = "delete";
+                        _mode = "insert";
                         break;
                     case 2:
                         _mode = "insert";
@@ -222,12 +222,14 @@ void worker_func(int tid, const string& mode, Table_config *config)
                     times_D.push_back(rdtsc_diff(t_before, t_after));
             }
             else if (_mode == "insert") {
+                int trans_cnt = 0;
                 t_before = read_timestamp();
-                table->append(tid, val);
+                int ret = table->append(tid, val, &trans_cnt);
                 l_n_insert ++;
                 t_after = read_timestamp();
-                if (config->verbose)
-                    times_I.push_back(rdtsc_diff(t_before, t_after));
+                if (config->verbose && ret == 0)
+                    // times_I.push_back(rdtsc_diff(t_before, t_after));
+                    times_I.push_back(trans_cnt);
             }
         } else {
             t_before = read_timestamp();

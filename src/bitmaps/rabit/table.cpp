@@ -224,7 +224,7 @@ TransDesc * Rabit::trans_begin(int tid, uint64_t db_timestamp_t)
     return (TransDesc *)th->active_trans;
 }
 
-int Rabit::trans_commit(int tid, uint64_t db_timestamp_t, uint64_t db_row_nums) 
+int Rabit::trans_commit(int tid, int *trans_cnt, uint64_t db_timestamp_t, uint64_t db_row_nums)
 {
     RABIT_ThreadInfo *th = &g_ths_info[tid];
     TransDesc *trans = (TransDesc *)__atomic_load_n(&th->active_trans, MM_ACQUIRE);
@@ -248,7 +248,7 @@ int Rabit::trans_commit(int tid, uint64_t db_timestamp_t, uint64_t db_row_nums)
         // Check after locking
 
         struct TransDesc *tail_t = __atomic_load_n(&trans_queue->tail, MM_ACQUIRE);
-        if (check_conflicts(trans, tail_t) != 0) {
+        if (check_conflicts(trans, tail_t, trans_cnt) != 0) {
             delete_trans(tid, trans);
             __atomic_store_n(&th->active_trans, NULL, MM_RELAXED);
             return -EPERM;
@@ -428,7 +428,7 @@ TransDesc * Rabit::get_rub_on_row(uint64_t tsp_begin, uint64_t tsp_end,
 // Side effect: Assign tail to trans->l_end_trans if there is no conflict,
 //          such that the next invocation of this function on the same trans can be accelerated.
 //          No concurrency issue because this function is invoked sequentially.
-int Rabit::check_conflicts(TransDesc *trans, TransDesc *tail)
+int Rabit::check_conflicts(TransDesc *trans, TransDesc *tail, int *trans_cnt)
 {
     TransDesc *end_trans_t = __atomic_load_n(&trans->l_end_trans, MM_ACQUIRE);
     TransDesc *end_trans_t_2 = __atomic_load_n(&end_trans_t->next, MM_ACQUIRE);
@@ -451,6 +451,9 @@ int Rabit::check_conflicts(TransDesc *trans, TransDesc *tail)
         }
         end_trans_t = end_trans_t_2;
         end_trans_t_2 = __atomic_load_n(&end_trans_t->next, MM_ACQUIRE);
+        if(trans_cnt) {
+            *trans_cnt += 1;
+        }
     }
     // No conflict such that move l_end_trans forward.
     __atomic_store_n(&trans->l_end_trans, end_trans_t, MM_CST);
@@ -525,12 +528,12 @@ int Rabit::pos2AE(int from, int to, Btv_set &pos_ae)
     return 0;
 }
 
-int Rabit::append(int tid, int val)
+int Rabit::append(int tid, int val, int *trans_cnt)
 {
-    return append(tid, val, UINT64_MAX);
+    return append(tid, val, UINT64_MAX, trans_cnt);
 }
 
-int Rabit::append(int tid, int val, uint64_t row_id) 
+int Rabit::append(int tid, int val, uint64_t row_id, int *trans_cnt) 
 {
     RABIT_ThreadInfo *th = &g_ths_info[tid];
     assert(val < num_btvs);
@@ -565,7 +568,7 @@ int Rabit::append(int tid, int val, uint64_t row_id)
     trans->l_inc_rows ++;
 
     if (autoCommit) {
-        return trans_commit(tid);
+        return trans_commit(tid, trans_cnt);
     }
 
     return 0;

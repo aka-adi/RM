@@ -122,7 +122,7 @@ protected:
     TransDesc * allocate_trans();
     int delete_trans(int, TransDesc *);
 
-    int check_conflicts(TransDesc *, TransDesc *);
+    int check_conflicts(TransDesc *, TransDesc *, int *);
 
     int pos2RE(int start, int end, Btv_set &pos_set);
 
@@ -154,8 +154,8 @@ public:
     Rabit(Table_config *);
     ~Rabit() { for(int i = 0; i < num_btvs; i++) {if(Btvs[i]) delete Btvs[i]; Btvs[i] = nullptr;} }
 
-    int append(int, int, uint64_t row_id);
-    int append(int, int);
+    int append(int, int, uint64_t row_id, int *trans_cnt = nullptr);
+    int append(int, int, int *trans_cnt = nullptr);
     int remove(int, uint64_t);
     int update(int, uint64_t, int);
     int evaluate(int, uint32_t);
@@ -165,7 +165,7 @@ public:
     void _xor_btv(SegBtv &res, uint32_t idx, TransDesc *trans);
 
     TransDesc * trans_begin(int, uint64_t db_timestamp_t = UINT64_MAX);
-    int trans_commit(int tid, uint64_t db_timestamp_t = UINT64_MAX, uint64_t db_row_nums = UINT64_MAX);
+    int trans_commit(int tid, int *trans_cnt = nullptr, uint64_t db_timestamp_t = UINT64_MAX, uint64_t db_row_nums = UINT64_MAX);
     int merge_bitmap(int, uint32_t, TransDesc *, Bitvector *, Bitvector *, std::map<uint64_t, RUB> *);
 
     void printTransQueue(uint64_t timestamp_t);

@@ -21,7 +21,7 @@ public:
 
     virtual int remove(int tid, uint64_t rowid) { return -1; }
 
-    virtual int append(int tid, int val) { return -1; }
+    virtual int append(int tid, int val, int *trans_cnt = nullptr) { return -1; }
 
     virtual int evaluate(int tid, uint32_t val) { return -1; }
 

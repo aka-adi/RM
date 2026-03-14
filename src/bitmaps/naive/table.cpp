@@ -72,7 +72,7 @@ void Table::_read_btv(int begin, int end) {
     }
 }
 
-int Table::append(int tid, int val) 
+int Table::append(int tid, int val, int *trans_cnt) 
 {
     lock_guard<shared_mutex> guard(g_lock);
 

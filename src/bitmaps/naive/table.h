@@ -16,7 +16,7 @@ namespace naive {
 
         int update(int tid, uint64_t rowid, int to_val);
         int remove(int tid, uint64_t rowid);
-        int append(int tid, int val);
+        int append(int tid, int val, int *trans_cnt = nullptr);
         int evaluate(int tid, uint32_t val);
         void _read_btv(int begin, int end);
 
