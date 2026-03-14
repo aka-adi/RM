@@ -112,6 +112,8 @@ protected:
     int merge_threshold;
 
     void _get_value(uint64_t, int, int, uint64_t, bool *, int *, struct RUB *, uint64_t *);
+    int _find_group_parallel(uint64_t row_id, uint64_t l_timestamp, int group_len, int n_groups);
+    int _binary_search(uint64_t row_id, uint64_t l_timestamp, int left, int right);
 
     int _get_bit(uint32_t val, uint64_t row_id, uint64_t l_timestamp);
     TransDesc * get_rub_on_row(uint64_t, uint64_t, TransDesc *, uint64_t, RUB &, uint64_t &);

@@ -877,78 +877,166 @@ out:
     __atomic_store_n(result, ret, MM_RELEASE);
 }
 
+int Rabit::_find_group_parallel(uint64_t row_id, uint64_t l_timestamp, int group_len, int n_groups) {
+    int n_threads = (config->nThreads_for_getval > n_groups) ? n_groups : config->nThreads_for_getval;
+    int offset = n_groups / n_threads;
+    int reminder = n_groups % n_threads;
+    std::atomic<int> group_found(-1);
+    thread* threads = new thread[n_threads];
+    auto group_search = [&](int begin, int end) {
+        for (int g = begin; g < end; ++g) {
+            int right = (g + 1) * group_len - 1;
+            RUB rub_t = RUB{0, TYPE_INV, {}};
+            uint64_t rub_tsp_t = 0UL;
+            TransDesc *start_trans = nullptr;
+            Bitvector *Btv = get_btv(right);
+            start_trans = Btv->log_shortcut;
+            uint64_t tsp_end = l_timestamp;
+            int bit1 = 0;
+            int bit2 = 0;
+            SegBtv *p = __atomic_load_n(&Btv->seg_btv, MM_ACQUIRE);
+            btv_seg* curr_seg = p->GetSeg(row_id);
+            bit1 = curr_seg->btv->getBit(row_id - curr_seg->start_row, config);
+            curr_seg->buffer->get_row_rub_from_buffer(row_id, right, start_trans->l_commit_ts, rub_t);
+            get_rub_on_row(start_trans->l_commit_ts, tsp_end, start_trans, row_id, rub_t, rub_tsp_t);
+            if (rub_t.type != TYPE_INV && rub_t.pos.count(right))
+                bit2 = 1;
+            int result = bit1 ^ bit2;
+            if (result == 1) {
+                group_found.store(g);
+                return;
+            }
+        }
+    };
+    int start = 0;
+    for (int t = 0; t < n_threads; ++t) {
+        int range = offset;
+        if (t < reminder) range++;
+        int end = start + range;
+        threads[t] = thread(group_search, start, end);
+        start = end;
+    }
+    for (int t = 0; t < n_threads; ++t) threads[t].join();
+    int found_group = group_found.load();
+    delete[] threads;
+    return found_group;
+}
+
+int Rabit::_binary_search(uint64_t row_id, uint64_t l_timestamp, int left, int right) {
+    int ret = -1;
+    while (left <= right) {
+        int mid = left + (right - left) / 2;
+        RUB rub_t = RUB{0, TYPE_INV, {}};
+        uint64_t rub_tsp_t = 0UL;
+        TransDesc *start_trans = nullptr;
+        Bitvector *Btv = get_btv(mid);
+        start_trans = Btv->log_shortcut;
+        uint64_t tsp_end = l_timestamp;
+        int bit1 = 0;
+        int bit2 = 0;
+        SegBtv *p = __atomic_load_n(&Btv->seg_btv, MM_ACQUIRE);
+        btv_seg* curr_seg = p->GetSeg(row_id);
+        bit1 = curr_seg->btv->getBit(row_id - curr_seg->start_row, config);
+        curr_seg->buffer->get_row_rub_from_buffer(row_id, mid, start_trans->l_commit_ts, rub_t);
+        get_rub_on_row(start_trans->l_commit_ts, tsp_end, start_trans, row_id, rub_t, rub_tsp_t);
+        if (rub_t.type != TYPE_INV && rub_t.pos.count(mid))
+            bit2 = 1;
+        int result = bit1 ^ bit2;
+        if (result == 1) {
+            ret = mid;
+            right = mid - 1;
+        } else {
+            left = mid + 1;
+        }
+    }
+    return ret;
+}
+
 int Rabit::get_value_rcu(uint64_t row_id, uint64_t l_timestamp, RUB &last_rub) 
 {
 
-    bool flag = false;
-    int n_threads = (config->nThreads_for_getval > num_btvs) ? num_btvs : config->nThreads_for_getval;
-    int begin = 0;
-    int offset = num_btvs / n_threads;
-    thread * getval_threads = new thread[n_threads];
-    int * local_results = new int[n_threads];
-    fill_n(local_results, n_threads, -2);
-    RUB *last_rub_t = new RUB[n_threads]{};
-    uint64_t *last_rub_tsp_t = new uint64_t[n_threads];
-    fill_n(last_rub_tsp_t, n_threads, 0UL);
-    uint64_t last_rub_tsp = 0UL;
+    if (config->encoding == AE) {
+        int group_len = config->GE_group_len;
+        int n_groups = num_btvs / group_len;
+        int found_group = _find_group_parallel(row_id, l_timestamp, group_len, n_groups);
+        if (found_group == -1) return -1;
+        int left = found_group * group_len;
+        int right = (found_group + 1) * group_len - 1;
+        return _binary_search(row_id, l_timestamp, left, right);
+    } else if (config->encoding == RE) {
+        return _binary_search(row_id, l_timestamp, 0, num_btvs - 1);
+    } else {
+        // ...existing code...
+        bool flag = false;
+        int n_threads = (config->nThreads_for_getval > num_btvs) ? num_btvs : config->nThreads_for_getval;
+        int begin = 0;
+        int offset = num_btvs / n_threads;
+        thread * getval_threads = new thread[n_threads];
+        int * local_results = new int[n_threads];
+        fill_n(local_results, n_threads, -2);
+        RUB *last_rub_t = new RUB[n_threads]{};
+        uint64_t *last_rub_tsp_t = new uint64_t[n_threads];
+        fill_n(last_rub_tsp_t, n_threads, 0UL);
+        uint64_t last_rub_tsp = 0UL;
 
-    assert(offset >= 1); 
+        assert(offset >= 1); 
 
-    for (int i = 0; i < n_threads; i++) {
-        int begin = i * offset;
-        int range = offset;
-        if ((i == (n_threads-1)) && (num_btvs > n_threads))
-            range += (num_btvs % n_threads);
+        for (int i = 0; i < n_threads; i++) {
+            int begin = i * offset;
+            int range = offset;
+            if ((i == (n_threads-1)) && (num_btvs > n_threads))
+                range += (num_btvs % n_threads);
 
-        getval_threads[i] = thread(&Rabit::_get_value, this, row_id, begin, range, l_timestamp,
-                                &flag, &local_results[i], &last_rub_t[i], &last_rub_tsp_t[i]);
-    }
+            getval_threads[i] = thread(&Rabit::_get_value, this, row_id, begin, range, l_timestamp,
+                                    &flag, &local_results[i], &last_rub_t[i], &last_rub_tsp_t[i]);
+        }
 
-    int ret = -1; 
-    for (int t = 0; t < n_threads; t++) {
-        getval_threads[t].join();
-        int tmp = __atomic_load_n(&local_results[t], MM_CST);
-        if (tmp != -1) {
-            if (config->encoding == EE || config->encoding == GE) {
-                // assert(ret == -1);
-                if(ret != -1) {
-                    printTransQueue(l_timestamp);
-                    std::cout << std::endl << "conflict row_id : " << row_id << " two ans : " << ret << " and " << tmp << std::endl;
-                    std::cout << "conflict trans start_time : " << l_timestamp << std::endl << std::endl;
-                    uint128_t data_t = __atomic_load_n((uint128_t *)&g_timestamp, MM_RELAXED);
-                    printTransQueue(data_t);
-                    assert(0);
-                }
-                ret = tmp;
-            }
-            else if (config->encoding == RE || config->encoding == AE) {
-                if (ret == -1) {
+        int ret = -1; 
+        for (int t = 0; t < n_threads; t++) {
+            getval_threads[t].join();
+            int tmp = __atomic_load_n(&local_results[t], MM_CST);
+            if (tmp != -1) {
+                if (config->encoding == EE || config->encoding == GE) {
+                    // assert(ret == -1);
+                    if(ret != -1) {
+                        printTransQueue(l_timestamp);
+                        std::cout << std::endl << "conflict row_id : " << row_id << " two ans : " << ret << " and " << tmp << std::endl;
+                        std::cout << "conflict trans start_time : " << l_timestamp << std::endl << std::endl;
+                        uint128_t data_t = __atomic_load_n((uint128_t *)&g_timestamp, MM_RELAXED);
+                        printTransQueue(data_t);
+                        assert(0);
+                    }
                     ret = tmp;
-                } else {
-                    ret = (tmp < ret) ? tmp : ret;
+                }
+                else if (config->encoding == RE) {
+                    if (ret == -1) {
+                        ret = tmp;
+                    } else {
+                        ret = (tmp < ret) ? tmp : ret;
+                    }
+                }
+            }
+
+            if (last_rub_t[t].type != TYPE_INV) {
+                #if defined(VERIFY_RESULTS)
+                if (last_rub_tsp_t[t] == last_rub_tsp) {
+                    assert(last_rub_t[t].pos == last_rub.pos);
+                }
+                #endif
+                if (last_rub_tsp_t[t] > last_rub_tsp) {
+                    last_rub = last_rub_t[t];
+                    last_rub_tsp = last_rub_tsp_t[t];
                 }
             }
         }
 
-        if (last_rub_t[t].type != TYPE_INV) {
-            #if defined(VERIFY_RESULTS)
-            if (last_rub_tsp_t[t] == last_rub_tsp) {
-                assert(last_rub_t[t].pos == last_rub.pos);
-            }
-            #endif
-            if (last_rub_tsp_t[t] > last_rub_tsp) {
-                last_rub = last_rub_t[t];
-                last_rub_tsp = last_rub_tsp_t[t];
-            }
-        }
+        delete[] local_results;
+        delete[] getval_threads;
+        delete[] last_rub_t;
+        delete[] last_rub_tsp_t;
+
+        return ret;
     }
-
-    delete[] local_results;
-    delete[] getval_threads;
-    delete[] last_rub_t;
-    delete[] last_rub_tsp_t;
-
-    return ret;
 }
 
 void Rabit::printTransQueue(uint64_t timestamp_t)
