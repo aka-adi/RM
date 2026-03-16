@@ -13,7 +13,7 @@ ranges = 0.35
 workers = 16
 merge_workers_list = [1, 2, 4]
 group_len = [64]
-total = 100
+total = 2000
 word_size = 32
 
 def range_query(w, mw, a, c, total, queries_ratio, rows, e, group_len, q_range, v, out_dir):
