@@ -58,7 +58,8 @@ def parse_folder_name(folder_name):
 
 
 def main():
-    base_dir = '/home/xxxw/RM'
+    # 获取当前执行目录
+    base_dir = os.getcwd()
     
     # 存储分类结果 - 新的结构: results[dataset][rows][base][category]
     results = {}
