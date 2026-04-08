@@ -43,6 +43,7 @@ void bitmap_set_bits_avx512(
         __m512i out  = _mm512_or_si512(mem, mask);
         //  scatter: 向量 -> dst[addr[0..15]]
         _mm512_i32scatter_epi32(dst, addr, out, 4);
+    }
 
     // 剩余不足16个
     for (; i < count; i++) {
@@ -51,7 +52,6 @@ void bitmap_set_bits_avx512(
         uint32_t b = idx % 32;
         dst[w] |= 1U << b;
     }
-}
 }
 
 
