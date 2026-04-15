@@ -108,15 +108,16 @@ def analyse_exp4_merge(directory_path):
         print(f"No rawdata files found in {raw_dir}")
         return
 
-    merged_lines = ["# merge_threads\tinsert_nums\n"]
+    merged_lines = ["# merge_threshold\trange_query_latency(ms)\tupdate_latency(ms)\n"]
     for fname in files:
         src_file = os.path.join(raw_dir, fname)
         ret = latency_analysis(src_file)
-        # 线程数从文件名中提取 mw_x
-        mw_match = re.search(r'mw_(\d+)', fname)
-        mw = int(mw_match.group(1)) if mw_match else 0
-        insert_num = ret[-1] if len(ret) > 0 else 0
-        merged_lines.append(f"{mw}\t{insert_num}\n")
+        # 线程数从文件名中提取 mh_x
+        mh_match = re.search(r'mh_(\d+)', fname)
+        mh = int(mh_match.group(1)) if mh_match else 0
+        range_query_latency = ret[1] if len(ret) > 1 else 0
+        update_latency = ret[2] if len(ret) > 2 else 0
+        merged_lines.append(f"{mh}\t{range_query_latency}\t{update_latency}\n")
     # 写入合并后的distilled文件
     merged_distilled = os.path.join(distilled_dir, "exp4_merge_latency_merged.distilled")
     with open(merged_distilled, 'w') as fout:
