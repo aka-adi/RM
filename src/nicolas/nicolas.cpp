@@ -184,10 +184,10 @@ void worker_func(int tid, const string& mode, Table_config *config)
                         _mode = "insert";
                         break;
                     case 1:
-                        _mode = "insert";
+                        _mode = "update";
                         break;
                     case 2:
-                        _mode = "insert";
+                        _mode = "delete";
                         break;
                 }
             }
@@ -228,8 +228,8 @@ void worker_func(int tid, const string& mode, Table_config *config)
                 l_n_insert ++;
                 t_after = read_timestamp();
                 if (config->verbose && ret == 0)
-                    // times_I.push_back(rdtsc_diff(t_before, t_after));
-                    times_I.push_back(trans_cnt);
+                    times_I.push_back(rdtsc_diff(t_before, t_after));
+                    // times_I.push_back(trans_cnt);
             }
         } else {
             t_before = read_timestamp();

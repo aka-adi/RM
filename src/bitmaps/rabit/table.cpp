@@ -1329,6 +1329,9 @@ void Rabit::merge_worker(pos_segs& pos_seg, TransDesc* worker_trans_start,
         std::queue<uint32_t> btv_queue2;
         for(auto btv_idx = begin; btv_idx != end; ++btv_idx)
         {
+            if(btv_idx == config->g_cardinality) {
+                continue;
+            }
             if(btv_idx % gl == gl - 1)
                 btv_queue.push(btv_idx);
             else
@@ -1361,6 +1364,9 @@ void Rabit::merge_worker(pos_segs& pos_seg, TransDesc* worker_trans_start,
     } else {
         for(auto btv_idx = begin; btv_idx != end; ++btv_idx)
         {
+            if(btv_idx == config->g_cardinality) {
+                continue;
+            }
             auto Btv = get_btv(btv_idx);
             //replace bitvector
             for(auto seg_id : Btv->replace_list) {
@@ -1405,9 +1411,8 @@ Bitvector * Rabit::get_btv(uint32_t idx)
     return (idx >= GE_IDX_BEGIN) ? Btvs_GE[idx - GE_IDX_BEGIN] : Btvs[idx];
 }
 
-bool run_merge_func = false;
+bool run_merge_func = true;
 #define SLEEP_WHEN_IDEL (10000)
-#define MERGE_THRESHOLD (8)
 
 void rabit_merge_dispatcher(BaseTable *table)
 {
@@ -1445,10 +1450,14 @@ void rabit_merge(rabit::Rabit *table)
     TransDesc *trans_itor = worker_trans_start;
     while(trans_itor != worker_trans_end) {
         trans_itor = trans_itor->next;
-        if(++merge_count == MERGE_THRESHOLD) {
+        if(++merge_count == table->config->n_merge_threshold) {
             worker_trans_end = trans_itor;
             break;
         }
+    }
+    if(merge_count < table->config->n_merge_threshold) {
+        this_thread::sleep_for(chrono::microseconds(SLEEP_WHEN_IDEL));
+        return;
     }
 
     Rabit::pos_segs pos_seg;
@@ -1466,7 +1475,7 @@ void rabit_merge(rabit::Rabit *table)
         }
     }
 
-    uint32_t idx_size = table->num_btvs + table->num_btvs_GE;
+    uint32_t idx_size = table->num_btvs + (table->config->encoding == GE ? table->num_btvs_GE : 0);
     uint32_t n_threads = table->config->nThreads_for_merge;
     uint32_t n_btv_per_thread = idx_size / n_threads;
     uint32_t reminder = idx_size % n_threads;
