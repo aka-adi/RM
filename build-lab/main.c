@@ -329,7 +329,7 @@ int lab_multiword() {
             }
             memset(dst_normal, 0, BITMAP_WORDS * sizeof(uint32_t));
             memset(dst_avx512, 0, BITMAP_WORDS * sizeof(uint32_t));
-            quicksort_uint32_array(indices, cur_count);
+            // quicksort_uint32_array(indices, cur_count);
             struct timespec t1, t2, t3, t4;
             clock_gettime(CLOCK_MONOTONIC, &t1);
             bitmap_set_bits_normal(dst_normal, indices, cur_count);
