@@ -228,8 +228,12 @@ int lab_onlyone() {
     const int repeat = 15; // 每组运行次数
     const int test_sizes[] = {16, 32, 64, 256, 512, 1000, 5000, 10000, 100000, 300000, 500000, 700000, 900000, 1000000};
     const int num_sizes = sizeof(test_sizes) / sizeof(test_sizes[0]);
-    printf("\n==== 多组BIT_COUNT实验 ====" "\n");
-    printf("位向量长度: %d bits\n", BITMAP_WORDS * 32);
+    FILE *fp = fopen("bitvector_build_time.dat", "w");
+    if (!fp) {
+        perror("fopen output file");
+        return 1;
+    }
+    fprintf(fp, "#count normal_time(ns) avx512_time(ns) speedup correctness\n");
     for (int s = 0; s < num_sizes; ++s) {
         int cur_count = test_sizes[s];
         double normal_times[repeat], avx512_times[repeat];
@@ -292,19 +296,24 @@ int lab_onlyone() {
         }
         double avg_n = (sum_n - min_n - max_n) / (repeat - 2);
         double avg_a = (sum_a - min_a - max_a) / (repeat - 2);
-        printf("位向量中1的个数 %d, 普通C %.3f ns, AVX512 %.3f ns, 加速比 %.2fx, 正确性: %s\n",
+        fprintf(fp, "%d %.3f %.3f %.2f %s\n",
             cur_count, avg_n, avg_a, avg_n/avg_a, all_ok ? "YES" : "NO");
     }
+    fclose(fp);
     return 0;
 }
 
 int lab_multiword() {
     // 实验参数
     const int repeat = 15;
-    const int test_sizes[] = {16, 32, 64, 256, 512, 1000, 5000, 10000, 100000, 300000, 500000, 700000, 900000, 1000000};
+    const int test_sizes[] = {10, 100, 1000, 10000, 100000, 1000000, 10000000};
     const int num_sizes = sizeof(test_sizes) / sizeof(test_sizes[0]);
-    printf("\n==== 多组BIT_COUNT实验 (每word可多位) ====\n");
-    printf("位向量长度: %d bits\n", BITMAP_WORDS * 32);
+    FILE *fp = fopen("bitvector_build_time.dat", "w");
+    if (!fp) {
+        perror("fopen output file");
+        return 1;
+    }
+    fprintf(fp, "#count normal_time(ns) avx512_time(ns) speedup correctness\n");
     for (int s = 0; s < num_sizes; ++s) {
         int cur_count = test_sizes[s];
         double normal_times[repeat], avx512_times[repeat];
@@ -361,9 +370,10 @@ int lab_multiword() {
         }
         double avg_n = (sum_n - min_n - max_n) / (repeat - 2);
         double avg_a = (sum_a - min_a - max_a) / (repeat - 2);
-        printf("位向量中1的个数 %d, 普通C %.3f ns, AVX512 %.3f ns, 加速比 %.2fx, 正确性: %s\n",
+        fprintf(fp, "%d %.3f %.3f %.2f %s\n",
             cur_count, avg_n, avg_a, avg_n/avg_a, all_ok == true ? "YES" : "NO");
     }
+    fclose(fp);
     return 0;
 }
 
