@@ -61,6 +61,9 @@ def range_query(w, a, c, total, queries_ratio, rows, e, group_len, q_range, v, o
     if (a == 'cubit-lk'):
         cmd = '../CUBIT/build/nicolas --mode range --approach {} --workers {} --number-of-queries {} --number-of-udis {} --cardinality {} --index-path {} --number-of-rows {} --rows-per-seg 100000 --verbose {} --encoding-scheme {} --range {}'.\
                 format(a, w, int(total*queries_ratio), int(total*(1-queries_ratio)), c, index_path, rows, v, e, q_range)
+    if (a == 'ub'):
+        cmd = './build/nicolas --mode range --approach rabit --workers {} --number-of-queries {} --number-of-udis {} --cardinality {} --index-path {} --number-of-rows {} --rows-per-seg 100000 --verbose {} --encoding-scheme {} --group-path {} --GE-group-len {} --RQ-length {}'.\
+            format(w, int(total*queries_ratio), int(total*(1-queries_ratio)), c, index_path, rows, v, e, group_path, group_len, q_range)
     
     output_file = out_dir + '/eva_{}_{}_{}M_c_{}_w_{}_ratio_{}_range_{}_GL_{}.rawdata'.format(a, 'latency' if (v == 'true') else 'throughput', int(rows / M), c, w, 1 - queries_ratio, q_range, group_len)
 
@@ -88,7 +91,7 @@ def main():
         elif a == "cubit-lk":
             e = "EE"
         elif a == "ub":
-            e = "RE"
+            e = "EE"
         else:
             print("ERROR: Unknow encoding mode!!!")
             exit(1)

@@ -15,7 +15,7 @@ set rmargin 1.6
 
 # 子图1: Throughput vs Update Rate (左侧)
 set xrange [0:45]
-set yrange [5:1000]
+set yrange [5:10000]
 
 set xtics offset 0,0.6,0 font 'Linux Libertine O,20' (0, 10, 20, 30, 40)
 set ytics offset 0.2,0,0 font 'Linux Libertine O,20' (10, "10^2" 100, "10^3" 1000)
@@ -41,7 +41,7 @@ unset label
 
 # 子图2: Throughput vs Query Range (右侧)
 set xrange [5:50]
-set yrange [5:1000]
+set yrange [5:10000]
 
 set xtics offset 0,0.5,0 font 'Linux Libertine O,20' (5, 15, 25, 35, 45)
 set ytics offset 0.2,0,0 font 'Linux Libertine O,20' (10, "10^2" 100, "10^3" 1000)
