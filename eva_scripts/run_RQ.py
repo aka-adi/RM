@@ -7,7 +7,7 @@ from decimal import Decimal
 M = 1000000
 
 #uniform
-approaches = ['rabit', 'cubit-lk', 'ub']
+approaches = ['ub']
 cardinalities = ['1000']
 rows = 10 * M
 radio = [Decimal('1.0'), Decimal('0.9'), Decimal('0.8'), Decimal('0.6'), Decimal('0.4'), Decimal('0.2'), Decimal('0.1'), Decimal('0.0')]
@@ -62,9 +62,9 @@ def range_query(w, a, c, total, queries_ratio, rows, e, group_len, q_range, v, o
         cmd = '../CUBIT/build/nicolas --mode range --approach {} --workers {} --number-of-queries {} --number-of-udis {} --cardinality {} --index-path {} --number-of-rows {} --rows-per-seg 100000 --verbose {} --encoding-scheme {} --range {}'.\
                 format(a, w, int(total*queries_ratio), int(total*(1-queries_ratio)), c, index_path, rows, v, e, q_range)
     if (a == 'ub'):
-        cmd = './build/nicolas --mode range --approach rabit --workers {} --number-of-queries {} --number-of-udis {} --cardinality {} --index-path {} --number-of-rows {} --rows-per-seg 100000 --verbose {} --encoding-scheme {} --group-path {} --GE-group-len {} --RQ-length {}'.\
-            format(w, int(total*queries_ratio), int(total*(1-queries_ratio)), c, index_path, rows, v, e, group_path, group_len, q_range)
-    
+        cmd = './build/nicolas --mode range --approach {} --workers {} --number-of-queries {} --number-of-udis {} --cardinality {} --index-path {} --number-of-rows {} --rows-per-seg 100000 --verbose {} --encoding-scheme {} --group-path {} --GE-group-len {} --RQ-length {}'.\
+            format(a, w, int(total*queries_ratio), int(total*(1-queries_ratio)), c, index_path, rows, v, e, group_path, group_len, q_range)
+
     output_file = out_dir + '/eva_{}_{}_{}M_c_{}_w_{}_ratio_{}_range_{}_GL_{}.rawdata'.format(a, 'latency' if (v == 'true') else 'throughput', int(rows / M), c, w, 1 - queries_ratio, q_range, group_len)
 
     print(cmd)
@@ -91,7 +91,7 @@ def main():
         elif a == "cubit-lk":
             e = "EE"
         elif a == "ub":
-            e = "EE"
+            e = "RE"
         else:
             print("ERROR: Unknow encoding mode!!!")
             exit(1)

@@ -78,6 +78,96 @@ def analyse_throughput_varying_UDI_rabit(directory_path):
         print("Output file is created at " + output_file.name + "\n")
         output_file.close()
 
+# ----------------- Latency Analysis (仿照throughput) -----------------
+def analyse_latency_varying_UDI_rabit(directory_path):
+    for AE_GROUP_SIZE in AE_GROUP_SIZES:
+        experiment_name = f"eva_rabit_latency_{int(ROWS/1000000)}M_c_{CARDINALITY}_w_{WORKERS}"
+        output_file_name = os.path.join(directory_path, DISTILLED_DATA_DIR, experiment_name + f"_GL_{AE_GROUP_SIZE}_vary_UDI.distilled")
+        if os.path.exists(output_file_name):
+            print(f"Output file '{output_file_name}' already exists. Skip the analysis.")
+            continue
+        output_file = open(output_file_name, 'w')
+        output_file.write('# UDI ratio (% of operations)\tRQ\tUDI (ms)\n')
+        for udi in UDI_RATIO_NORMAL:
+            src_file = os.path.join(directory_path, RAW_DATA_DIR, experiment_name + f"_ratio_{udi}" + f"_range_{int(RQ_RANGE_FIX*CARDINALITY)}_GL_{AE_GROUP_SIZE}.rawdata")
+            ret = latency_analysis(src_file)
+            output_file.write('{}\t{}\t{}\n'.format(int(float(udi)*100), *ret))
+            print("\tAnalyzing rawdata file : " + src_file)
+            print("\tLatency results : " + str(ret) + "\n")
+        print("Output file is created at " + output_file.name + "\n")
+        output_file.close()
+
+def analyse_latency_varying_UDI_common(directory_path, alg):
+    experiment_name = "eva_{}_latency_{}M_c_{}_w_{}".format(alg, int(ROWS/1000000), CARDINALITY, WORKERS)
+    output_file_name = os.path.join(directory_path, DISTILLED_DATA_DIR, experiment_name + f"_vary_UDI.distilled")
+    if os.path.exists(output_file_name):
+        print(f"Output file '{output_file_name}' already exists. Skip the analysis.")
+        return
+    output_file = open(output_file_name, 'w')
+    output_file.write('# UDI ratio (% of operations)\tRQ\tUDI (ms)\n')
+    UDI_RATIO = UDI_RATIO_RE if alg == "ub" else UDI_RATIO_NORMAL
+    for udi in UDI_RATIO:
+        src_file = os.path.join(directory_path, RAW_DATA_DIR, experiment_name + f"_ratio_{udi}" + f"_range_{int(RQ_RANGE_FIX*CARDINALITY)}_GL_0.rawdata")
+        ret = latency_analysis(src_file)
+        output_file.write('{}\t{}\t{}\n'.format(int(float(udi)*100), *ret))
+        print("\tAnalyzing rawdata file : " + src_file)
+        print("\tLatency results : " + str(ret) + "\n")
+    print("Output file is created at " + output_file.name + "\n")
+    output_file.close()
+
+def analyse_latency_varying_UDI(directory_path):
+    print('-' * 10)
+    print('Analyse the latency of range queries with varying UDI ratio.')
+    for alg in ALGORITHMS:
+        if alg == "rabit":
+            analyse_latency_varying_UDI_rabit(directory_path)
+        else:
+            analyse_latency_varying_UDI_common(directory_path, alg)
+
+def analyse_latency_varying_range_rabit(directory_path):
+    for AE_GROUP_SIZE in AE_GROUP_SIZES:
+        experiment_name = "eva_rabit_latency_{}M_c_{}_w_{}_ratio_{}".format(int(ROWS/1000000), CARDINALITY, WORKERS, UDI_RATIO_FIX)
+        output_file_name = os.path.join(directory_path, DISTILLED_DATA_DIR, experiment_name + f"_GL_{AE_GROUP_SIZE}_vary_QL.distilled")
+        if os.path.exists(output_file_name):
+            print(f"Output file '{output_file_name}' already exists. Skip the analysis.")
+            continue
+        output_file = open(output_file_name, 'w')
+        output_file.write('# Range (% of cardinality)\tRQ\tUDI (ms)\n')
+        for rq_range in RQ_RANGE:
+            src_file = os.path.join(directory_path, RAW_DATA_DIR, experiment_name + f"_range_{int(rq_range*CARDINALITY)}" + f"_GL_{AE_GROUP_SIZE}.rawdata")
+            ret = latency_analysis(src_file)
+            output_file.write('{}\t{}\t{}\n'.format(int(rq_range*100), *ret))
+            print("\tAnalyzing rawdata file : " + src_file)
+            print("\tLatency results : " + str(ret) + "\n")
+        print("Output file is created at " + output_file.name + "\n")
+        output_file.close()
+
+def analyse_latency_varying_range_common(directory_path, alg):
+    experiment_name = "eva_{}_latency_{}M_c_{}_w_{}_ratio_{}".format(alg, int(ROWS/1000000), CARDINALITY, WORKERS, UDI_RATIO_FIX)
+    output_file_name = os.path.join(directory_path, DISTILLED_DATA_DIR, experiment_name + f"_vary_QL.distilled")
+    if os.path.exists(output_file_name):
+        print(f"Output file '{output_file_name}' already exists. Skip the analysis.")
+        return
+    output_file = open(output_file_name, 'w')
+    output_file.write('# Range (% of cardinality)\tRQ\tUDI (ms)\n')
+    for rq_range in RQ_RANGE:
+        src_file = os.path.join(directory_path, RAW_DATA_DIR, experiment_name + f"_range_{int(rq_range*CARDINALITY)}" + "_GL_0.rawdata")
+        ret = latency_analysis(src_file)
+        output_file.write('{}\t{}\t{}\n'.format(int(rq_range*100), *ret))
+        print("\tAnalyzing rawdata file : " + src_file)
+        print("\tLatency results : " + str(ret) + "\n")
+    print("Output file is created at " + output_file.name + "\n")
+    output_file.close()
+
+def analyse_latency_varying_range(directory_path):
+    print('-' * 10)
+    print('Analyse the latency of range queries with varying range.')
+    for alg in ALGORITHMS:
+        if alg == "rabit":
+            analyse_latency_varying_range_rabit(directory_path)
+        else:
+            analyse_latency_varying_range_common(directory_path, alg)
+
 
 def analyse_throughput_varying_UDI_common(directory_path, alg):
     experiment_name = "eva_{}_throughput_{}M_c_{}_w_{}".format(alg, int(ROWS/1000000), CARDINALITY, WORKERS)
@@ -203,86 +293,41 @@ def draw_latency_varying_range(directory_path):
     os.system(gnu_command)
     print("\tGraphs are generated in the directory : " + os.path.join(directory_path, GRAPHS_DIR) + "\n")
 
+def draw_latency_varying_UDI(directory_path):
+    # invoke gnuplot script
+    gnu_command = "gnuplot -e 'directory_path=\"" + directory_path + "\"' eva_scripts/gnuplot_scripts/latency_vs_UDI.gnuplot" 
+    print("Generating graphs using command \n\t" + gnu_command)
+    os.system(gnu_command)
+    print("\tGraphs are generated in the directory : " + os.path.join(directory_path, GRAPHS_DIR) + "\n")
+
 def latency_analysis(filename):
     f = open(filename)
-    Qvec = [] # vec for operations
-    Uvec = []
-    Ivec = []
-    Dvec = []
+    # Q和RQ统一处理为RQ，U/D/I合并为UDI
     RQvec = []
-    ret = []
-
+    UDIvec = []
     for line in f:
         a = line.split()
         if (len(a) != 2):
             continue
-        elif line.startswith('Q '):
-            Qvec.append(int(a[-1]) / 1000000)
-        elif line.startswith('RQ '):
+        elif line.startswith('Q ') or line.startswith('RQ '):
             RQvec.append(int(a[-1]) / 1000000)
-        elif line.startswith('U '):
-            Uvec.append(int(a[-1]) / 1000000)
-        elif line.startswith('D '):
-            Dvec.append(int(a[-1]) / 1000000)
-        elif line.startswith('I '):
-            Ivec.append(int(a[-1]) / 1000000)
+        elif line.startswith('U ') or line.startswith('D ') or line.startswith('I '):
+            UDIvec.append(int(a[-1]) / 1000000)
         else:
             continue
-
-    if len(Qvec) != 0:
-        ret.append(round(sum(Qvec) / len(Qvec), 2)) 
-    else:
-        ret.append(0)
+    ret = []
+    # 输出RQ、UDI
     if len(RQvec) != 0:
         ret.append(round(sum(RQvec) / len(RQvec), 2))
     else:
         ret.append(0)
-    if len(Uvec) != 0:
-        ret.append(round(sum(Uvec) / len(Uvec), 2))
+    if len(UDIvec) != 0:
+        ret.append(round(sum(UDIvec) / len(UDIvec), 2))
     else:
         ret.append(0)
-    if len(Dvec) != 0:
-        ret.append(round(sum(Dvec) / len(Dvec), 2)) 
-    else:
-        ret.append(0)
-    if len(Ivec) != 0:
-        ret.append(round(sum(Ivec) / len(Ivec), 2)) 
-    else:
-        ret.append(0)
-
     return ret
 
-def analyse_latency_varying_range(directory_path):
-    print ('-' * 10)
-    print ('Analyse the latency of range queries with varying range.')
 
-    for alg in ALGORITHMS:
-        experiment_name = "eva_{}_latency_{}M_c_{}_w_{}_ratio_{}".format(alg, int(ROWS/1000000), CARDINALITY, WORKERS, UDI_RATIO_FIX)
-        output_file_name = os.path.join(directory_path, DISTILLED_DATA_DIR, experiment_name + f".distilled")
-
-        if os.path.exists(output_file_name):
-            print(f"Output file '{output_file_name}' already exists. Skip the analysis.")
-            continue
-
-        output_file = open(output_file_name, 'w')
-        output_file.write('# Range (% of cardinality) \t Query Latency (ms) \t RQ (ms) \t Update (ms) \t Delete (ms) \t Insert (ms)\n')
-
-        for rq_range in RQ_RANGE:
-            src_file = os.path.join(directory_path, RAW_DATA_DIR, experiment_name + f"_range_{int(rq_range*CARDINALITY)}_")
-            if alg == "rabit":
-                src_file += "GL_10.rawdata"
-            else:
-                src_file += "GL_0.rawdata"
-
-            ret = latency_analysis(src_file)
-
-            # print out latency values in ret to a single line
-            output_file.write('{} \t\t {} \n'.format(int(rq_range*100), "           ".join(map(str, ret))))
-            print("\tAnalyzing rawdata file : " + src_file)
-            print("\tLatency results : " + " ".join(map(str, ret)) + "\n")
-
-        print("Output file is created at " + output_file.name + "\n")
-        output_file.close()
 
 def convert_eps_to_pdf(directory_path):
     # if epstopdf is not installed, return
@@ -343,15 +388,17 @@ if __name__ == "__main__":
     create_directory(os.path.join(directory_path, DISTILLED_DATA_DIR))
 
     analyse_throughput_varying_UDI(directory_path)
+    analyse_latency_varying_UDI(directory_path)
 
     analyse_throughput_varying_range(directory_path)
-
     analyse_latency_varying_range(directory_path)
     
     create_directory(os.path.join(directory_path, GRAPHS_DIR))
     draw_throughput_varying_UDI(directory_path)
     draw_throughput_varying_range(directory_path)
     draw_throughput_varying_2(directory_path)
+    draw_latency_varying_UDI(directory_path)
+    draw_latency_varying_range(directory_path)
     convert_eps_to_png(directory_path)
 
     print("All analyses are done.")
