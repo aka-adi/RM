@@ -45,26 +45,21 @@ def latency_analysis(filename):
         else:
             continue
 
-    if len(Qvec) != 0:
-        ret.append(round(sum(Qvec) / len(Qvec), 2))
-    else:
-        ret.append(0)
-    if len(RQvec) != 0:
-        ret.append(round(sum(RQvec) / len(RQvec), 2))
-    else:
-        ret.append(0)
-    if len(Uvec) != 0:
-        ret.append(round(sum(Uvec) / len(Uvec), 2))
-    else:
-        ret.append(0)
-    if len(Dvec) != 0:
-        ret.append(round(sum(Dvec) / len(Dvec), 2))
-    else:
-        ret.append(0)
-    if len(Ivec) != 0:
-        ret.append(round(sum(Ivec) / len(Ivec), 2))
-    else:
-        ret.append(0)
+
+    import numpy as np
+    def p90(vec):
+        if len(vec) == 0:
+            return 0
+        return round(float(np.percentile(vec, 99)), 2)
+    def mean(vec):
+        if len(vec) == 0:
+            return 0
+        return round(float(sum(vec)) / len(vec), 2)
+
+    ret.append(p90(Qvec))
+    ret.append(p90(RQvec))
+    ret.append(p90(Uvec))
+    ret.append(p90(Dvec))
 
     return ret
 

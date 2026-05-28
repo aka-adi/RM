@@ -54,6 +54,118 @@ def throughput_analysis(filename):
     f.close()
     return ret
 
+def latency_analysis(filename):
+    if not os.path.exists(filename):
+        print(f"WARNING: Raw data file '{filename}' does not exist. Skip the analysis.")
+        return [0, 0]
+
+    RQvec = []
+    UDIvec = []
+
+    with open(filename) as f:
+        for line in f:
+            a = line.split()
+            if len(a) != 2:
+                continue
+
+            if line.startswith('Q ') or line.startswith('RQ '):
+                RQvec.append(int(a[-1]) / 1000000)
+            elif line.startswith('U '):
+                UDIvec.append(int(a[-1]) / 1000000)
+
+    ret = []
+
+    if len(RQvec) != 0:
+        ret.append(round(sum(RQvec) / len(RQvec), 2))
+    else:
+        ret.append(0)
+
+    if len(UDIvec) != 0:
+        ret.append(round(sum(UDIvec) / len(UDIvec), 2))
+    else:
+        ret.append(0)
+
+    return ret
+
+def analyse_latency_varying_cardinality_rabit(directory_path):
+    for ge_group_num in GE_GROUP_NUM:
+        experiment_name = f"eva_rabit_latency_{int(ROWS/1000000)}M"
+        output_file_name = os.path.join(
+            directory_path,
+            DISTILLED_DATA_DIR,
+            experiment_name + f"_w_{WORKERS}_ratio_{UDI_RATIO}_rangefix_{RQ_RANGE_FIX}_GN_{ge_group_num}_vary_cardinality.distilled"
+        )
+
+        if os.path.exists(output_file_name):
+            print(f"Output file '{output_file_name}' already exists. Skip the analysis.")
+            continue
+
+        output_file = open(output_file_name, 'w')
+        output_file.write('# cardinality \t RQ \t UDI (ms) \n')
+
+        for cardinality in CARDINALITY:
+            g_len = int(cardinality / ge_group_num)
+            src_file = os.path.join(
+                directory_path,
+                RAW_DATA_DIR,
+                experiment_name + f"_c_{cardinality}_w_{WORKERS}_ratio_{UDI_RATIO}_range_{int(RQ_RANGE_FIX*cardinality)}_GL_{g_len}.rawdata"
+            )
+
+            ret = latency_analysis(src_file)
+
+            output_file.write('{} \t\t {} \t\t {} \n'.format(cardinality, ret[0], ret[1]))
+            print("\tAnalyzing rawdata file : " + src_file)
+            print("\tLatency results : RQ = " + str(ret[0]) + " ms, UDI = " + str(ret[1]) + " ms\n")
+
+        print("Output file is created at " + output_file.name + "\n")
+        output_file.close()
+
+def analyse_latency_varying_cardinality_common(directory_path, alg):
+    experiment_name = f"eva_{alg}_latency_{int(ROWS/1000000)}M"
+    output_file_name = os.path.join(
+        directory_path,
+        DISTILLED_DATA_DIR,
+        experiment_name + f"_w_{WORKERS}_ratio_{UDI_RATIO}_rangefix_{RQ_RANGE_FIX}_vary_cardinality.distilled"
+    )
+
+    if os.path.exists(output_file_name):
+        print(f"Output file '{output_file_name}' already exists. Skip the analysis.")
+        return
+
+    output_file = open(output_file_name, 'w')
+    output_file.write('# cardinality \t RQ \t UDI (ms) \n')
+
+    for cardinality in CARDINALITY:
+        src_file = os.path.join(
+            directory_path,
+            RAW_DATA_DIR,
+            experiment_name + f"_c_{cardinality}_w_{WORKERS}_ratio_{UDI_RATIO}_range_{int(RQ_RANGE_FIX*cardinality)}_GL_0.rawdata"
+        )
+
+        ret = latency_analysis(src_file)
+
+        output_file.write('{} \t\t {} \t\t {} \n'.format(cardinality, ret[0], ret[1]))
+        print("\tAnalyzing rawdata file : " + src_file)
+        print("\tLatency results : RQ = " + str(ret[0]) + " ms, UDI = " + str(ret[1]) + " ms\n")
+
+    print("Output file is created at " + output_file.name + "\n")
+    output_file.close()
+
+def analyse_latency_varying_cardinality(directory_path):
+    print('-' * 10)
+    print('Analyse the latency of range queries with varying cardinality.')
+
+    for alg in ALGORITHMS:
+        if alg == "rabit":
+            analyse_latency_varying_cardinality_rabit(directory_path)
+        else:
+            analyse_latency_varying_cardinality_common(directory_path, alg)
+
+def draw_latency_varying_cardinality(directory_path):
+    gnu_command = "gnuplot -e 'directory_path=\"" + directory_path + "\"' eva_scripts/gnuplot_scripts/latency_vs_cardinality.gnuplot"
+    print("Generating graph Latency vs. cardinality using command \n\t" + gnu_command)
+    os.system(gnu_command)
+    print("\tGraphs are generated in the directory : " + os.path.join(directory_path, GRAPHS_DIR) + "\n")
 
 def analyse_throughput_varying_cardinality_rabit(directory_path):
     for ge_group_num in GE_GROUP_NUM:
@@ -181,9 +293,11 @@ if __name__ == "__main__":
     create_directory(os.path.join(directory_path, DISTILLED_DATA_DIR))
 
     analyse_throughput_varying_cardinality(directory_path)
+    analyse_latency_varying_cardinality(directory_path)
     
     create_directory(os.path.join(directory_path, GRAPHS_DIR))
     draw_throughput_varying_cardinality(directory_path)
+    draw_latency_varying_cardinality(directory_path)
     convert_eps_to_png(directory_path)
 
 

@@ -73,9 +73,11 @@ def main():
                     for gp in groups:
                         l = int(c / gp)
                         range_query(workers, a, c, total, q, rows, e, l, r, 'false', eva_directory_name)
+                        range_query(workers, a, c, total, q, rows, e, l, r, 'true', eva_directory_name)
                 else:
                     l = 0
                     range_query(workers, a, c, total, q, rows, e, l, r, 'false', eva_directory_name)
+                    range_query(workers, a, c, total, q, rows, e, l, r, 'true', eva_directory_name)
 
 if __name__ == '__main__':
     main()

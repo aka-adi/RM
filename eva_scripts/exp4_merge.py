@@ -11,9 +11,9 @@ rows = 10*M
 radio = [Decimal('0.8')]
 ranges = 0.35
 workers = 16
-merge_thread = [4, 8, 16, 32, 64, 10000000]
-group_len = [64]
-total = 2000
+merge_threshold = [64, 32, 16, 0]
+group_len = [128]
+total = 1000
 word_size = 32
 
 def range_query(w, mh, a, c, total, queries_ratio, rows, e, group_len, q_range, v, out_dir):
@@ -25,7 +25,7 @@ def range_query(w, mh, a, c, total, queries_ratio, rows, e, group_len, q_range, 
 
     group_path = "BM_" + str(int(rows / M)) + "M_" + str(c) + "_GE_" + str(group_len) + "_" + str(word_size)
 
-    cmd = './build/nicolas --mode range --approach {} --workers {} --merge-threads 4 --merge-threshold {} --number-of-queries {} --number-of-udis {} --cardinality {} --index-path {} --number-of-rows {} --rows-per-seg 100000 --verbose {} --encoding-scheme {} --group-path {} --GE-group-len {} --RQ-length {}'.\
+    cmd = './build/nicolas --mode range --approach {} --workers {} --merge-threads 2 --merge-threshold {} --number-of-queries {} --number-of-udis {} --cardinality {} --index-path {} --number-of-rows {} --rows-per-seg 12500 --verbose {} --encoding-scheme {} --group-path {} --GE-group-len {} --RQ-length {}'.\
             format(a, w, mh, int(total*queries_ratio), int(total*(1-queries_ratio)), c, index_path, rows, v, e, group_path, group_len, q_range)
 
     output_file = out_dir + '/eva_{}_{}_{}M_c_{}_w_{}_mh_{}_ratio_{}_range_{}_GL_{}.rawdata'.format(a, 'latency' if (v == 'true') else 'throughput', int(rows / M), c, w, mh, 1 - queries_ratio, q_range, group_len)
@@ -53,7 +53,7 @@ def main():
             for q in radio:
                 r = int(ranges * float(c))
                 for l in group_len:
-                    for mh in merge_thread:
+                    for mh in merge_threshold:
                         range_query(workers, mh, a, c, total, q, rows, e, l, r, 'true', eva_directory_name)
 
 if __name__ == '__main__':

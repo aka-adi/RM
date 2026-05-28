@@ -311,7 +311,7 @@ def latency_analysis(filename):
             continue
         elif line.startswith('Q ') or line.startswith('RQ '):
             RQvec.append(int(a[-1]) / 1000000)
-        elif line.startswith('U ') or line.startswith('D ') or line.startswith('I '):
+        elif line.startswith('U '):
             UDIvec.append(int(a[-1]) / 1000000)
         else:
             continue
