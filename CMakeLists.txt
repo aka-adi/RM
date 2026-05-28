@@ -13,6 +13,7 @@ include_directories(${CMAKE_SOURCE_DIR}/src)
 IF(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
     # RABIT relies on RCU to lazily free nodes. The RCU mechanism, however, incurs the invalid-offsetof warning. So we disable it.
     # The fastbit lib incurs a deprecated-declarations warning. So we disable it since we don't want to touch fastbit's code anyway.
+    add_compile_options(-march=native -mavx512f -mavx512bw -mavx512vl -mavx512cd -mavx512vbmi2)
     set(CMAKE_CXX_FLAGS "-g -ggdb -O3 -std=gnu++17 -fPIC -Wno-invalid-offsetof -Wno-deprecated-declarations")
     # set(CMAKE_CXX_FLAGS "-g -O3 -std=gnu++17 -fPIC")
 

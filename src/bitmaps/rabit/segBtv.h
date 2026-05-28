@@ -6,7 +6,7 @@
 
 #include "fastbit/bitvector.h"
 
-#define BTV_BUFFER_SIZE 50
+#define BTV_BUFFER_SIZE 300
 #define BUFFER_MERGE_SIZE 40
 #define UN_USED_SOLT (((uint128_t)1 << 127) - 1)
 

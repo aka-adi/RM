@@ -176,6 +176,8 @@ public:
 
     int get_value_rcu(uint64_t, uint64_t, RUB &); 
     uint64_t range(int, uint32_t, uint32_t);
+    void GetRowids(SegBtv &seg_btv, std::vector<int64_t> &row_ids);
+    std::vector<int64_t>& range_ids(int, uint32_t, uint32_t, uint64_t &);
     SegBtv *range_res(int, uint32_t, uint32_t);
     uint64_t get_g_timestamp() { return g_timestamp; }
     uint64_t get_g_number_of_rows() { return g_number_of_rows; }

@@ -85,6 +85,7 @@ class Table_config {
         std::string INDEX_PATH;
         std::string ANCHOR_PATH;
         std::string GROUP_PATH;
+        std::string INDEX_PATH_BY_EE;
         uint32_t n_workers;
         uint32_t n_udis;
         uint32_t n_queries;

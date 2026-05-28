@@ -185,6 +185,29 @@ void genAE( std::string data_path, std::string write_dir, int group_length, int 
 
 }
 
+
+// 通过EE编码的bitmaps生成AE编码的bitmaps
+void genAEbyEE(std::string ee_path, std::string write_dir, int group_length, int cardinality, uint64_t rows) {
+	write_dir = CheckDir(write_dir);
+	ee_path = CheckDir(ee_path);
+
+	for(int i = 0; i < cardinality; i += group_length) {
+		ibis::bitvector curr_btv;
+		for(int j = 0; j + i < cardinality && j < group_length; j++) {
+			stringstream ss;
+			ss << ee_path << j + i << ".bm";
+			ibis::bitvector btv(ss.str().c_str());
+			curr_btv |= btv;
+
+			// AE编码下每个组内每个bitvector都单独输出
+			stringstream w;
+			w << write_dir << j + i << ".bm";
+			curr_btv.compress();
+			curr_btv.write(w.str().c_str());
+		}
+	}
+}
+
 void genGEbyEE( std::string ee_path, std::string write_dir, int group_length, int cardinality, uint64_t rows) {
 
 	write_dir = CheckDir(write_dir);

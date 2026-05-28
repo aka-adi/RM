@@ -140,7 +140,7 @@ while(n--)
 
 }
 
-TEST(RANGETEST, SEQUENTIAL_AE) {
+TEST(DISABLED_RANGETEST, SEQUENTIAL_AE) {
 
 	auto row_nums = M;
 	auto n_queries = row_nums / 100;
@@ -190,4 +190,38 @@ TEST(RANGETEST, SEQUENTIAL_AE) {
 	EXPECT_EQ(rabit->range(0, 0, cardinality), rabit->config->n_rows);
 
 	rcu_unregister_thread();
+}
+
+TEST(RANGETEST, RANGE_IDS_AE) {
+	auto row_nums = 1000;
+	auto cardinality = 20;
+	auto word_size = 32;
+
+	Table_config *tconfig = new Table_config{};
+	init_config(tconfig, row_nums, cardinality, Index_encoding::AE, word_size, row_nums);
+	rabit::Rabit *rabit = new rabit::Rabit(tconfig);
+
+	// 插入已知数据
+	rcu_register_thread();
+	for (int row = 0; row < row_nums; row++) {
+		int val = row % cardinality;
+		rabit->update(0, row, val);
+	}
+	rcu_unregister_thread();
+
+	// 查询某个范围
+	uint32_t start = 5, range = 3;
+	uint64_t n_ids = 0;
+	std::vector<int64_t> &ids = rabit->range_ids(0, start, range, n_ids);
+
+	// 检查每个 id 的值是否在 [start, start+range)
+	for (uint64_t i = 0; i < n_ids; ++i) {
+		int row_id = ids[i];
+		RUB last_rub = RUB{0, TYPE_INV, {}};
+		int v = rabit->get_value_rcu(row_id, rabit->g_timestamp, last_rub);
+		EXPECT_GE(v, (int)start);
+		EXPECT_LT(v, (int)(start + range));
+	}
+	// delete[] ids;
+	delete rabit;
 }

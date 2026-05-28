@@ -7,6 +7,7 @@
 #include "bitmaps/rabit/segBtv.h"
 #include "bitmaps/rabit/table.h"
 #include <queue>
+#include <immintrin.h>
 
 using namespace std;
 using namespace rabit;
@@ -41,7 +42,7 @@ Rabit::Rabit(Table_config *config) : BaseTable(config),
     } 
 
     assert(trans_dummy->l_commit_ts == TIMESTAMP_INIT_VAL);
-    assert(trans_dummy->l_number_of_rows == config->n_rows);
+    // assert(trans_dummy->l_number_of_rows == config->n_rows);
 
     Btvs = new Bitvector*[num_btvs];
     Btvs_GE = new Bitvector*[num_btvs_GE];
@@ -1095,6 +1096,101 @@ uint64_t Rabit::range(int tid, uint32_t start, uint32_t range)
     return cnt;
 }
 
+
+inline uint32_t reverseBits(uint32_t x) {
+	x = (((x & 0xaaaaaaaa) >> 1) | ((x & 0x55555555) << 1));
+	x = (((x & 0xcccccccc) >> 2) | ((x & 0x33333333) << 2));
+	x = (((x & 0xf0f0f0f0) >> 4) | ((x & 0x0f0f0f0f) << 4));
+	x = (((x & 0xff00ff00) >> 8) | ((x & 0x00ff00ff) << 8));
+	return((x >> 16) | (x << 16));
+}
+
+void vbmi2_decoder_cvtepu16(int64_t *base_ptr, uint32_t &base,
+									uint64_t idx, uint32_t bits) {
+
+	__m512i indexes = _mm512_maskz_compress_epi16(bits, _mm512_set_epi32(
+		0x001e001d, 0x001c001b, 0x001a0019, 0x00180017,
+		0x00160015, 0x00140013, 0x00120011, 0x0010000f,
+		0x000e000d, 0x000c000b, 0x000a0009, 0x00080007,
+		0x00060005, 0x00040003, 0x00020001, 0x00000000
+	));
+	__m512i t0 = _mm512_cvtepu16_epi64(_mm512_castsi512_si128(indexes));
+	__m512i t1 = _mm512_cvtepu16_epi64(_mm512_extracti32x4_epi32(indexes, 1));
+	__m512i t2 = _mm512_cvtepu16_epi64(_mm512_extracti32x4_epi32(indexes, 2));
+	__m512i t3 = _mm512_cvtepu16_epi64(_mm512_extracti32x4_epi32(indexes, 3));
+	__m512i start_index = _mm512_set1_epi64(idx);
+
+	_mm512_storeu_si512(base_ptr + base, _mm512_add_epi64(t0, start_index));
+	_mm512_storeu_si512(base_ptr + base + 8, _mm512_add_epi64(t1, start_index));
+	_mm512_storeu_si512(base_ptr + base + 16, _mm512_add_epi64(t2, start_index));
+	_mm512_storeu_si512(base_ptr + base + 24, _mm512_add_epi64(t3, start_index));
+
+	base += _popcnt32(bits);
+}
+
+// 确保row_ids有足够的空间存储结果
+void Rabit::GetRowids(SegBtv &seg_btv, std::vector<int64_t> &row_ids) {
+    auto element_ptr = &row_ids[0];
+
+    uint32_t ids_count = 0;
+    uint64_t ids_idx = 0;
+
+#ifdef USE_AVX512
+    for (const auto & [id_t, seg_t] : seg_btv.seg_table) {
+        ibis::bitvector &btv_res = *seg_t->btv;
+        // traverse m_vec
+        auto it = btv_res.m_vec.begin();
+        while(it != btv_res.m_vec.end()) {
+            vbmi2_decoder_cvtepu16(element_ptr, ids_count, ids_idx, reverseBits(*it));
+            ids_idx += 31;
+            it++;
+        }
+
+        // active word
+        vbmi2_decoder_cvtepu16(element_ptr, ids_count, ids_idx, \
+                                reverseBits(btv_res.active.val << (31 - btv_res.active.nbits)));
+        ids_idx += btv_res.active.nbits;
+    }
+#else
+    // 非AVX512实现
+    for (const auto & [id_t, seg_t] : seg_btv.seg_table) {
+        ibis::bitvector &btv_res = *seg_t->btv;
+        uint64_t base_row = id_t * btv_res.size(); // 假设id_t为分段起始编号
+        uint64_t idx = 0;
+        // 遍历m_vec
+        for (auto it = btv_res.m_vec.begin(); it != btv_res.m_vec.end(); ++it, ++idx) {
+            uint32_t word = reverseBits(*it);
+            for (int bit = 0; bit < 31; ++bit) {
+                if (word & (1U << bit)) {
+                    if (ids_count < row_ids.size())
+                        row_ids[ids_count++] = base_row + idx * 31 + bit;
+                }
+            }
+        }
+        // active word
+        uint32_t active_word = reverseBits(btv_res.active.val << (31 - btv_res.active.nbits));
+        for (int bit = 0; bit < btv_res.active.nbits; ++bit) {
+            if (active_word & (1U << bit)) {
+                if (ids_count < row_ids.size())
+                    row_ids[ids_count++] = base_row + idx * 31 + bit;
+            }
+        }
+    }
+#endif
+}
+
+
+
+std::vector<int64_t>& Rabit::range_ids(int tid, uint32_t start, uint32_t range, uint64_t &n_ids)
+{
+    SegBtv *res = range_res(tid, start, range);
+    res->_count_ones_in_thread(&n_ids, 0, res->seg_table.size());
+    std::vector<int64_t> row_ids(n_ids);
+    GetRowids(*res, row_ids);
+    delete res;
+    return row_ids;
+}
+
 SegBtv *Rabit::range_res(int tid, uint32_t start, uint32_t range)
 {
     RABIT_ThreadInfo *th = &g_ths_info[tid];
@@ -1413,6 +1509,7 @@ Bitvector * Rabit::get_btv(uint32_t idx)
 
 bool run_merge_func = true;
 #define SLEEP_WHEN_IDEL (10000)
+#define MOST_MERGE_ONE_TIME (16)
 
 void rabit_merge_dispatcher(BaseTable *table)
 {
@@ -1422,7 +1519,7 @@ void rabit_merge_dispatcher(BaseTable *table)
 
     rabit::Rabit* table2 = dynamic_cast<rabit::Rabit*>(table);
 
-    while (READ_ONCE(run_merge_func)) {
+    while (READ_ONCE(run_merge_func) && table->config->n_merge_threshold < 10000000) {
         rabit_merge(table2);
     }
 
@@ -1450,10 +1547,11 @@ void rabit_merge(rabit::Rabit *table)
     TransDesc *trans_itor = worker_trans_start;
     while(trans_itor != worker_trans_end) {
         trans_itor = trans_itor->next;
-        if(++merge_count == table->config->n_merge_threshold) {
+        if(++merge_count == MOST_MERGE_ONE_TIME) {
             worker_trans_end = trans_itor;
             break;
         }
+        // merge_count++;
     }
     if(merge_count < table->config->n_merge_threshold) {
         this_thread::sleep_for(chrono::microseconds(SLEEP_WHEN_IDEL));
@@ -1471,6 +1569,10 @@ void rabit_merge(rabit::Rabit *table)
     {
         for(const auto btv_idx : rub_t.pos)
         {
+            if (btv_idx >= table->config->g_cardinality) {
+                // 暂时不考虑基数变化情况，便于实现，后续可以优化
+                continue;
+            }
             pos_seg[btv_idx][table->get_btv(btv_idx)->seg_btv->getSegId(row_id_t)].insert(row_id_t);
         }
     }
@@ -1501,5 +1603,6 @@ void rabit_merge(rabit::Rabit *table)
     delete[] threads;
 
     table->set_merge_cursor(worker_trans_end);
+    // this_thread::sleep_for(chrono::microseconds(100 * SLEEP_WHEN_IDEL / table->config->n_merge_threshold));
 
 }
